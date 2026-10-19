@@ -121,6 +121,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .letter { width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 4px; display: grid; place-items: center; font: 500 11px var(--f-mono); color: var(--muted); background: var(--panel); flex: none; }
 .subfield { font-size: 12px; color: var(--muted); }
 
+.lvmh-key { padding-top: 12px; border-top: 1px dashed var(--line); }
 .keyrow { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px; }
 .notice { background: var(--accent-soft); border-radius: var(--r); padding: 12px 14px; font-size: 13px; display: flex; flex-direction: column; gap: 10px; }
 .notice p { margin: 0; }
@@ -282,6 +283,16 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
           <label class="lbl" for="keyGoogle">Google AI Studio</label>
           <div class="keyrow"><input type="password" id="keyGoogle" placeholder="AIza…" autocomplete="off" spellcheck="false"><button type="button" class="btn small" data-reveal="keyGoogle">Show</button></div>
         </div>
+        <div class="field lvmh-key">
+          <label class="lbl" for="keyLvmh">LVMH <small>model TBD</small></label>
+          <div class="keyrow"><input type="password" id="keyLvmh" placeholder="API key" autocomplete="off" spellcheck="false"><button type="button" class="btn small" data-reveal="keyLvmh">Show</button></div>
+          <input type="text" id="lvmhUrl" placeholder="Endpoint, e.g. https://api.example.com/v1" spellcheck="false" aria-label="LVMH endpoint">
+          <select id="lvmhFormat" aria-label="LVMH API format">
+            <option value="openai">Works like OpenAI's Images API</option>
+            <option value="gemini">Works like Google's Gemini API</option>
+          </select>
+          <p class="hint">Fill these in once the LVMH model is chosen. Their team can give you the key, the endpoint and which format it follows. Until then, column C accepts dropped images.</p>
+        </div>
         <button type="button" class="btn" id="loadModels">Load my model lists</button>
         <p class="hint" id="modelsLoaded"></p>
       </div>
@@ -320,6 +331,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 <datalist id="dl-openaiImage"></datalist>
 <datalist id="dl-openaiChat"></datalist>
 <datalist id="dl-gemini"></datalist>
+<datalist id="dl-lvmh"></datalist>
 <datalist id="dl-manual"><option value="LVMH · TBD"><option value="ChatGPT app"><option value="Gemini app"><option value="Midjourney"><option value="Firefly"><option value="Flux"></datalist>
 <input type="file" id="colInput" accept="image/png,image/jpeg,image/webp" hidden>
 
@@ -363,19 +375,25 @@ const PROVIDERS = {
   "openai-responses": { label: "OpenAI · Responses", route: "Chat model rewrites → image tool", key: "openai", list: "openaiChat", def: "gpt-5.5-pro", heading: "Responses" },
   "openai-images": { label: "OpenAI · Images API", route: "Original brief → image model", key: "openai", list: "openaiImage", def: "gpt-image-2.5-sunburst", heading: "Images API" },
   "gemini": { label: "Google · Gemini", route: "Original brief → Gemini image model", key: "google", list: "gemini", def: "gemini-3-pro-image", heading: "Gemini" },
+  "lvmh": { label: "LVMH · custom API", route: "Brief + references → LVMH model", key: "lvmh", list: "lvmh", def: "", heading: "LVMH · TBD" },
   "manual": { label: "Add by hand", route: "Result added from another app", key: null, list: "manual", def: "", heading: "Added by hand" }
 };
 const DEFAULT_LISTS = {
   openaiImage: ["gpt-image-2.5-sunburst", "gpt-image-2.5-flare", "gpt-image-2"],
   openaiChat: ["gpt-5.5-pro", "gpt-6-astra"],
-  gemini: ["gemini-3-pro-image"]
+  gemini: ["gemini-3-pro-image"],
+  lvmh: []
 };
+const KEYNAME = { openai: "OpenAI", google: "Google", lvmh: "LVMH" };
 // Friendly names shown as column headings and on slides; the model id stays underneath.
 const NICK = { "gemini-3-pro-image": "Nano Banana Pro", "gemini-3.1-flash-image": "Nano Banana 2", "gemini-3.1-flash-lite-image": "Nano Banana 2 Lite", "gpt-5.5-pro": "OpenAI Pro" };
 const nameOf = c => NICK[c.model] || c.model || PROVIDERS[c.provider].heading;
 const LVMH_LABEL = "LVMH · TBD";
 
 const keys = LS.get("ml.keys", { openai: "", google: "" });
+keys.lvmhFormat = keys.lvmhFormat || "openai";
+const lvmhUrl = () => (keys.lvmhUrl || "").trim().replace(/\/+$/, "");
+const lvmhReady = () => !!(keys.lvmh && lvmhUrl());
 const lists = LS.get("ml.lists", {});
 let run = null;           // the comparison on screen
 let historyCache = [];
@@ -462,7 +480,7 @@ function newRunFrom(src) {
     title: src?.title || "", brief: src?.brief || "", instructions: src?.instructions || "",
     size: src?.size || "auto", quality: src?.quality || "auto",
     refs: (src?.refs || []).filter(r => !r.example).map(r => ({ ...r })),
-    cols: (src?.cols || [blankCol("openai-responses", "gpt-5.5-pro", "gpt-image-2.5-sunburst"), blankCol("gemini", "gemini-3-pro-image"), blankCol("manual", LVMH_LABEL)])
+    cols: (src?.cols || [blankCol("openai-responses", "gpt-5.5-pro", "gpt-image-2.5-sunburst"), blankCol("gemini", "gemini-3-pro-image"), blankCol("lvmh", "")])
       .map(c => blankCol(c.provider, c.model, c.imageModel))
   };
 }
@@ -485,7 +503,7 @@ function renderModelRows() {
           ${Object.entries(PROVIDERS).map(([k, p]) => `<option value="${k}"${k === c.provider ? " selected" : ""}>${esc(p.label)}</option>`).join("")}
         </select>
         <input type="text" id="model${i}" data-i="${i}" list="dl-${PROVIDERS[c.provider].list}" value="${esc(c.model)}"
-          placeholder="${c.provider === "manual" ? "Name it, e.g. ChatGPT app" : "Model id"}" aria-label="Column ${LETTERS[i]} model" spellcheck="false">
+          placeholder="${c.provider === "manual" ? "Name it, e.g. ChatGPT app" : c.provider === "lvmh" ? "Model id (if LVMH gives one)" : "Model id"}" aria-label="Column ${LETTERS[i]} model" spellcheck="false">
         ${c.provider === "openai-responses" ? `<label class="subfield" for="imgModel${i}">Image tool model <span class="mono">(optional)</span></label>
         <input type="text" id="imgModel${i}" data-i="${i}" list="dl-openaiImage" value="${esc(c.imageModel)}" placeholder="Default image model" spellcheck="false">` : ""}
       </div>
@@ -504,7 +522,7 @@ function renderSidebar() {
   $("#size").value = run.size; $("#quality").value = run.quality;
   renderModelRows(); renderRefs(); renderRunButton();
 }
-function apiCols() { return run.cols.map((c, i) => i).filter(i => run.cols[i].provider !== "manual"); }
+function apiCols() { return run.cols.map((c, i) => i).filter(i => { const p = run.cols[i].provider; return p !== "manual" && (p !== "lvmh" || lvmhReady()); }); }
 function renderRunButton() {
   const b = $("#runBtn"); const n = apiCols().length;
   if (controllers.size) { b.textContent = "Stop"; b.disabled = false; $("#runHint").textContent = "Generating…"; return; }
@@ -512,11 +530,11 @@ function renderRunButton() {
   b.disabled = n === 0;
   b.textContent = n === 0 ? "No API columns" : `Generate ${n} ${n === 1 ? "output" : "outputs"}`;
   const ks = ["openai", "google"].filter(k => run.cols.some(c => PROVIDERS[c.provider].key === k) && !keys[k]);
-  $("#runHint").textContent = ks.length ? `Needs ${ks.map(k => k === "openai" ? "OpenAI" : "Google").join(" + ")} key` : (run.refs.length ? `${run.refs.length} ref${run.refs.length > 1 ? "s" : ""} attached` : "Text only");
+  $("#runHint").textContent = ks.length ? `Needs ${ks.map(k => KEYNAME[k]).join(" + ")} key` : (run.refs.length ? `${run.refs.length} ref${run.refs.length > 1 ? "s" : ""} attached` : "Text only");
 }
 function renderKeyState() {
   if (hosted) { $("#keyState").innerHTML = `<span>Live generation off in this view</span>`; return; }
-  $("#keyState").innerHTML = `<span class="${keys.openai ? "on" : ""}">OpenAI</span><span class="${keys.google ? "on" : ""}">Google</span>`;
+  $("#keyState").innerHTML = `<span class="${keys.openai ? "on" : ""}">OpenAI</span><span class="${keys.google ? "on" : ""}">Google</span><span class="${lvmhReady() ? "on" : ""}">LVMH</span>`;
 }
 function fillDatalists() {
   for (const k of Object.keys(DEFAULT_LISTS)) {
@@ -535,6 +553,7 @@ function statusHTML(c, i) {
   if (c.status === "running") return `<span class="status running" data-elapsed="${i}">Running · 0.0s</span>`;
   if (c.status === "error") return `<span class="status error">Failed${c.ms ? " · " + secs(c.ms) : ""}</span>`;
   if (c.status === "done") return `<span class="status done">${c.source === "manual" ? "Added" : "Done"}${c.ms ? " · " + secs(c.ms) : ""}</span>`;
+  if (c.provider === "lvmh" && !lvmhReady()) return `<span class="status">Not set up</span>`;
   return `<span class="status">${c.provider === "manual" ? "Waiting for image" : "Ready"}</span>`;
 }
 function colHTML(c, i) {
@@ -548,7 +567,7 @@ function colHTML(c, i) {
   else if (c.status === "error") frame = `<div class="errmsg"><span>${esc(c.error)}</span>${c.provider !== "manual" ? `<button type="button" class="btn small" data-act="retry" data-i="${i}">Try again</button>` : ""}</div>`;
   else if (c.image) frame = `<img src="${c.image.data}" alt="Output ${LETTERS[i]} from ${esc(title)}" data-act="zoom" data-i="${i}">`;
   else frame = `<div class="empty"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.8"/><path d="M21 15l-5-5L5 21"/></svg>
-      <span>${c.provider === "manual" ? "Drop or paste the result here" : "Generate, or drop an image here"}</span>
+      <span>${c.provider === "manual" ? "Drop or paste the result here" : c.provider === "lvmh" && !lvmhReady() ? "Add the LVMH key and endpoint under API keys, or drop an image here" : "Generate, or drop an image here"}</span>
       <button type="button" class="btn small" data-act="pick" data-i="${i}">Choose image</button></div>`;
   const dims = c.image ? `${c.image.w}×${c.image.h}` : "No image";
   const promptBlock = c.prompt || c.text ? `
@@ -609,29 +628,34 @@ async function readJSON(r) {
   if (!r.ok) throw new UserError(j?.error?.message || `${r.status} ${r.statusText || "error"} from the provider.`);
   return j;
 }
-const GEN = {
-  async "openai-images"(r, c, signal) {
-    const fmt = { Authorization: "Bearer " + keys.openai };
+async function openaiStyle(r, c, signal, base, key) {
+    const fmt = { Authorization: "Bearer " + key };
     let res;
     if (r.refs.length) {
       const fd = new FormData();
-      fd.append("model", c.model); fd.append("prompt", r.brief);
+      if (c.model) fd.append("model", c.model);
+      fd.append("prompt", r.brief);
       if (r.size !== "auto") fd.append("size", r.size);
       if (r.quality !== "auto") fd.append("quality", r.quality);
       r.refs.forEach((f, i) => fd.append("image[]", dataURLToBlob(f.data), f.name || `reference-${i + 1}.png`));
-      res = await fetch("https://api.openai.com/v1/images/edits", { method: "POST", headers: fmt, body: fd, signal });
+      res = await fetch(`${base}/images/edits`, { method: "POST", headers: fmt, body: fd, signal });
     } else {
-      const body = { model: c.model, prompt: r.brief, n: 1 };
+      const body = { prompt: r.brief, n: 1 };
+      if (c.model) body.model = c.model;
       if (r.size !== "auto") body.size = r.size;
       if (r.quality !== "auto") body.quality = r.quality;
       if (/^dall-e/.test(c.model)) body.response_format = "b64_json";
-      res = await fetch("https://api.openai.com/v1/images/generations", { method: "POST", headers: { ...fmt, "Content-Type": "application/json" }, body: JSON.stringify(body), signal });
+      res = await fetch(`${base}/images/generations`, { method: "POST", headers: { ...fmt, "Content-Type": "application/json" }, body: JSON.stringify(body), signal });
     }
     const j = await readJSON(res);
     const d = j?.data?.[0];
     if (!d?.b64_json) throw new UserError("The response had no image in it.");
     return { image: `data:image/${j.output_format || "png"};base64,${d.b64_json}`, prompt: d.revised_prompt || r.brief, promptLabel: d.revised_prompt ? "Revised prompt" : "Original brief" };
-  },
+}
+const GEN = {
+  "openai-images": (r, c, signal) => openaiStyle(r, c, signal, "https://api.openai.com/v1", keys.openai),
+  gemini: (r, c, signal) => geminiStyle(r, c, signal, "https://generativelanguage.googleapis.com/v1beta", keys.google),
+  lvmh: (r, c, signal) => keys.lvmhFormat === "gemini" ? geminiStyle(r, c, signal, lvmhUrl(), keys.lvmh) : openaiStyle(r, c, signal, lvmhUrl(), keys.lvmh),
   async "openai-responses"(r, c, signal) {
     const content = [{ type: "input_text", text: r.brief }, ...r.refs.map(f => ({ type: "input_image", image_url: f.data }))];
     const tool = { type: "image_generation" };
@@ -647,15 +671,16 @@ const GEN = {
     const text = out.filter(o => o.type === "message").flatMap(o => o.content || []).filter(x => x.type === "output_text").map(x => x.text).join("\n").trim();
     if (!call) throw new UserError(text ? `No image came back. The model said: ${text}` : "No image came back from the image tool.");
     return { image: `data:image/${call.output_format || "png"};base64,${call.result}`, prompt: call.revised_prompt || r.brief, promptLabel: call.revised_prompt ? "Revised prompt" : "Original brief", text };
-  },
-  async gemini(r, c, signal) {
+  }
+};
+async function geminiStyle(r, c, signal, base, key) {
     const model = c.model.replace(/^models\//, "");
     const parts = [{ text: r.brief }, ...r.refs.map(f => ({ inlineData: { mimeType: f.type, data: f.data.split(",")[1] } }))];
     const gc = { responseModalities: ["TEXT", "IMAGE"] };
     const ar = { "1024x1024": "1:1", "1024x1536": "2:3", "1536x1024": "3:2" }[r.size];
     if (ar) gc.imageConfig = { aspectRatio: ar };
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": keys.google },
+    const res = await fetch(`${base}/models/${encodeURIComponent(model)}:generateContent`, {
+      method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify({ contents: [{ role: "user", parts }], generationConfig: gc }), signal
     });
     const j = await readJSON(res);
@@ -665,14 +690,13 @@ const GEN = {
     const text = ps.filter(p => p.text && !p.thought).map(p => p.text).join("\n").trim();
     if (!img) throw new UserError(text ? `No image came back. Gemini said: ${text}` : `No image came back${cand?.finishReason ? ` (${cand.finishReason})` : ""}. ${j?.promptFeedback?.blockReason ? "Blocked: " + j.promptFeedback.blockReason : ""}`.trim());
     return { image: `data:${img.mimeType || img.mime_type || "image/png"};base64,${img.data}`, prompt: r.brief, promptLabel: "Original brief", text };
-  }
-};
+}
 
 async function runCol(r, i) {
   const c = r.cols[i]; const p = PROVIDERS[c.provider];
   if (c.provider === "manual") return;
-  if (!keys[p.key]) { c.status = "error"; c.error = `Add your ${p.key === "openai" ? "OpenAI" : "Google"} key under API keys, then try again.`; if (r === run) renderCol(i); return; }
-  if (!c.model.trim()) { c.status = "error"; c.error = "Pick a model for this column first."; if (r === run) renderCol(i); return; }
+  if (!keys[p.key] || (p.key === "lvmh" && !lvmhUrl())) { c.status = "error"; c.error = p.key === "lvmh" ? "Add the LVMH key and endpoint under API keys, then try again." : `Add your ${KEYNAME[p.key]} key under API keys, then try again.`; if (r === run) renderCol(i); return; }
+  if (!c.model.trim() && c.provider !== "lvmh") { c.status = "error"; c.error = "Pick a model for this column first."; if (r === run) renderCol(i); return; }
   const ctrl = new AbortController(); controllers.add(ctrl); renderRunButton();
   c.status = "running"; c.error = ""; c.started = performance.now(); c.image = null; c.prompt = ""; c.text = ""; c.source = "api";
   if (r === run) renderCol(i);
@@ -684,6 +708,7 @@ async function runCol(r, i) {
     c.status = "error";
     c.error = e.name === "AbortError" ? "Stopped." :
       e instanceof UserError ? e.message :
+      c.provider === "lvmh" ? "Couldn't reach the LVMH endpoint. Check the address under API keys. If it's right, the endpoint may not accept calls from a web page; their team can allow this site." :
       `Couldn't reach ${p.heading}. Check your connection. If you opened this page from a website rather than a file on your computer, the browser may be blocking the call.`;
   }
   c.ms = Math.round(performance.now() - c.started); delete c.started;
@@ -884,8 +909,8 @@ function exampleRun() {
         notes: "Closest to the brief. Ruffles read well; print a little large on the body." },
       { ...blankCol("gemini", "gemini-3-pro-image"), status: "done", ms: 40900, source: "api", image: img({ base: "#b0c3df", leaf: "#58773a", seed: 5, scale: 1, tall: true, ruffle: true }),
         promptLabel: "Original brief", prompt: BRIEF, text: "Here's the sweater with the leaf print applied.", notes: "Print scale is right. Hem ribbing lost." },
-      { ...blankCol("manual", LVMH_LABEL), status: "empty", source: "",
-        notes: "Placeholder until the LVMH model is chosen. Drop its result here for now." }
+      { ...blankCol("lvmh", ""), status: "empty", source: "",
+        notes: "Placeholder until the LVMH model is chosen. Add its key under API keys, or drop a result here." }
     ]
   };
 }
@@ -920,9 +945,9 @@ function bind() {
   });
   dropTarget($("#refDrop"), files => addRefs(files));
   // keys
-  for (const [id, k] of [["keyOpenai", "openai"], ["keyGoogle", "google"]]) {
-    const el = $("#" + id); el.value = keys[k] || "";
-    el.addEventListener("input", () => { keys[k] = el.value.trim(); LS.set("ml.keys", keys); renderKeyState(); renderRunButton(); });
+  for (const [id, k, ev] of [["keyOpenai", "openai", "input"], ["keyGoogle", "google", "input"], ["keyLvmh", "lvmh", "input"], ["lvmhUrl", "lvmhUrl", "input"], ["lvmhFormat", "lvmhFormat", "change"]]) {
+    const el = $("#" + id); el.value = keys[k] || el.value;
+    el.addEventListener(ev, () => { keys[k] = el.value.trim(); LS.set("ml.keys", keys); renderKeyState(); renderRunButton(); if (k.startsWith("lvmh")) renderCols(); });
   }
   document.querySelectorAll("[data-reveal]").forEach(b => b.addEventListener("click", () => {
     const el = $("#" + b.dataset.reveal); el.type = el.type === "password" ? "text" : "password"; b.textContent = el.type === "password" ? "Show" : "Hide";
@@ -1014,7 +1039,7 @@ function dropTarget(el, onFiles) {
   el.addEventListener("drop", e => { e.preventDefault(); el.classList.remove("over"); onFiles(e.dataTransfer?.files || []); });
 }
 async function loadModelLists() {
-  if (!keys.openai && !keys.google) { toast("Add at least one key first."); return; }
+  if (!keys.openai && !keys.google && !lvmhReady()) { toast("Add at least one key first."); return; }
   const b = $("#loadModels"); b.disabled = true; b.textContent = "Loading…";
   const msgs = [];
   if (keys.openai) {
@@ -1032,6 +1057,13 @@ async function loadModelLists() {
       lists.gemini = (j.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent") && /image/.test(m.name)).map(m => m.name.replace(/^models\//, "")).sort();
       msgs.push(`Google: ${lists.gemini.length} image models`);
     } catch (e) { msgs.push("Google: " + (e instanceof UserError ? e.message : "couldn't connect")); }
+  }
+  if (lvmhReady() && keys.lvmhFormat === "openai") {
+    try {
+      const j = await readJSON(await fetch(`${lvmhUrl()}/models`, { headers: { Authorization: "Bearer " + keys.lvmh } }));
+      lists.lvmh = (j.data || j.models || []).map(m => typeof m === "string" ? m : (m.id || m.name)).filter(Boolean).sort();
+      msgs.push(`LVMH: ${lists.lvmh.length} models`);
+    } catch (e) { msgs.push("LVMH: no model list available"); }
   }
   LS.set("ml.lists", lists); fillDatalists();
   b.disabled = false; b.textContent = "Load my model lists"; toast(msgs.join(" · "), 5000);
