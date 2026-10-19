@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <script data-keep src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script data-keep src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 /* Layout: control sidebar on the left (brief, models, keys), three equal comparison columns on the right; stacks on narrow screens. */
 :root {
@@ -122,6 +123,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .subfield { font-size: 12px; color: var(--muted); }
 
 .lvmh-key { padding-top: 12px; border-top: 1px dashed var(--line); }
+.tplname { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.tplbtns { display: flex; gap: 6px; flex-wrap: wrap; }
 .keyrow { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px; }
 .notice { background: var(--accent-soft); border-radius: var(--r); padding: 12px 14px; font-size: 13px; display: flex; flex-direction: column; gap: 10px; }
 .notice p { margin: 0; }
@@ -303,6 +306,17 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
       </div>
     </section>
 
+    <section class="sec" id="slidesSec">
+      <div class="sec-head"><h2>Slides</h2><span class="eyebrow mono">04</span></div>
+      <p class="hint">Export to PowerPoint uses this template's layouts, fonts and logo. It stays in this browser and is never uploaded anywhere.</p>
+      <div class="field">
+        <label class="lbl">PowerPoint template</label>
+        <span class="tplname mono" id="tplName">None. Exports use plain slides.</span>
+        <div class="tplbtns"><button type="button" class="btn small" id="tplPick">Choose template…</button><button type="button" class="btn ghost small danger" id="tplRemove" hidden>Remove</button></div>
+        <input type="file" id="tplInput" accept=".pptx,.potx" hidden>
+      </div>
+    </section>
+
     <div class="runbar">
       <button type="button" class="btn primary" id="runBtn">Generate</button>
       <div class="sub">
@@ -442,7 +456,7 @@ async function readImageFile(file) {
 let dbp = null;
 function idb() {
   if (!dbp) dbp = new Promise((res, rej) => {
-    try { const r = indexedDB.open("model-lineup", 1); r.onupgradeneeded = () => r.result.createObjectStore("runs", { keyPath: "id" }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }
+    try { const r = indexedDB.open("model-lineup", 2); r.onupgradeneeded = () => { const d = r.result; if (!d.objectStoreNames.contains("runs")) d.createObjectStore("runs", { keyPath: "id" }); if (!d.objectStoreNames.contains("files")) d.createObjectStore("files"); }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }
     catch (e) { rej(e); }
   });
   return dbp;
@@ -833,6 +847,239 @@ async function buildDeck(runs) {
   await saveFile(name, blob);
 }
 
+/* ---------- PowerPoint from the user's own template (LUCIA layouts) ---------- */
+// The template file lives only in this browser (IndexedDB), never in the page source.
+const TPL_LAYOUTS = { overview: "12_Empty", one: "6_Empty", two: "7_Empty", three: "5_Empty" };
+let template = null; // { name, buf }
+const fileStore = {
+  async get(k) { try { const d = await idb(); return await new Promise((res, rej) => { const q = d.transaction("files").objectStore("files").get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => rej(q.error); }); } catch (e) { return null; } },
+  async put(k, v) { try { const d = await idb(); await new Promise((res, rej) => { const t = d.transaction("files", "readwrite"); t.objectStore("files").put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); return true; } catch (e) { return false; } },
+  async del(k) { try { const d = await idb(); await new Promise((res, rej) => { const t = d.transaction("files", "readwrite"); t.objectStore("files").delete(k); t.oncomplete = res; t.onerror = () => rej(t.error); }); } catch (e) {} }
+};
+async function layoutMap(zip) {
+  const map = {};
+  for (const f of zip.file(/^ppt\/slideLayouts\/slideLayout\d+\.xml$/)) {
+    const x = await f.async("string"); const m = x.match(/<p:cSld\b[^>]*\bname="([^"]*)"/);
+    if (m) map[m[1]] = { path: f.name, xml: x };
+  }
+  return map;
+}
+async function checkTemplate(buf) {
+  if (typeof window.JSZip !== "function") throw new Error("The PowerPoint tools didn't load. Check your connection and reload the page.");
+  const zip = await window.JSZip.loadAsync(buf);
+  if (!zip.file("ppt/presentation.xml")) throw new Error("That file isn't a PowerPoint presentation.");
+  const lm = await layoutMap(zip);
+  const missing = Object.values(TPL_LAYOUTS).filter(n => !lm[n]);
+  if (missing.length) throw new Error(`This template is missing the layouts the export uses (${missing.join(", ")}). Use the LUCIA template.`);
+  return true;
+}
+function renderTemplate() {
+  $("#tplName").textContent = template ? template.name : "None. Exports use plain slides.";
+  $("#tplRemove").hidden = !template;
+  $("#tplPick").textContent = template ? "Replace template…" : "Choose template…";
+}
+
+const EMU = 914400, em = v => Math.round(v * EMU);
+const XE = s => String(s ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const xf = b => b ? `<a:xfrm><a:off x="${em(b.x)}" y="${em(b.y)}"/><a:ext cx="${em(b.w)}" cy="${em(b.h)}"/></a:xfrm>` : "";
+const LIGHT = '<a:latin typeface="LVMH Sans Light" panose="02000000000000000000" pitchFamily="50" charset="0"/>';
+function runX(r) {
+  const at = [r.b === true ? ' b="1"' : r.b === false ? ' b="0"' : "", r.sz ? ` sz="${Math.round(r.sz * 100)}"` : "", r.i ? ' i="1"' : ""].join("");
+  return `<a:r><a:rPr lang="en-US"${at} dirty="0">${r.color ? `<a:solidFill><a:srgbClr val="${r.color}"/></a:solidFill>` : ""}${r.light ? LIGHT : ""}${r.font || ""}</a:rPr><a:t>${XE(r.t)}</a:t></a:r>`;
+}
+const paraX = (runs, ppr = "") => `<a:p>${ppr}${runs.map(runX).join("")}</a:p>`;
+function phBox(layoutXml, idx) {
+  const re = new RegExp(`<p:(?:sp|pic)>(?:(?!</p:(?:sp|pic)>)[\\s\\S])*?idx="${idx}"(?:(?!</p:(?:sp|pic)>)[\\s\\S])*?<a:off x="(\\d+)" y="(\\d+)"/><a:ext cx="(\\d+)" cy="(\\d+)"/>`);
+  const m = layoutXml.match(re); if (!m) return null;
+  return { x: +m[1] / EMU, y: +m[2] / EMU, w: +m[3] / EMU, h: +m[4] / EMU };
+}
+class SlideX {
+  constructor(layoutPath, layoutXml) { this.layoutPath = layoutPath; this.layoutXml = layoutXml; this.items = []; this.rels = []; this.id = 2; }
+  box(idx) { return phBox(this.layoutXml, idx); }
+  text(idx, paras, box, bodyPr = "<a:bodyPr/>") {
+    if (!box) box = this.box(idx);
+    this.items.push(`<p:sp><p:nvSpPr><p:cNvPr id="${this.id++}" name="Text ${idx}"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="body" sz="quarter" idx="${idx}"/></p:nvPr></p:nvSpPr><p:spPr>${xf(box)}</p:spPr><p:txBody>${bodyPr}<a:lstStyle/>${paras}</p:txBody></p:sp>`);
+  }
+  textBox(paras, box, bodyPr) {
+    this.items.push(`<p:sp><p:nvSpPr><p:cNvPr id="${this.id++}" name="Caption ${this.id}"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr>${xf(box)}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></p:spPr><p:txBody>${bodyPr}<a:lstStyle/>${paras}</p:txBody></p:sp>`);
+  }
+  pic(idx, media, box, extraSpPr = "") {
+    if (!box) box = this.box(idx);
+    const rid = "rId" + (this.rels.length + 2); this.rels.push({ rid, target: "../media/" + media.name });
+    // contain-fit: negative crop pads the picture inside its frame, as the template's own slides do
+    const ia = media.w / media.h, ba = box.w / box.h; let src = "";
+    if (ia > ba) { const p = Math.round(((ba > 0 ? (box.h * ia / box.w) : 1) - 1) / 2 * 100000); if (p > 0) src = ` t="-${p}" b="-${p}"`; }
+    else { const p = Math.round(((box.w / (box.h * ia)) - 1) / 2 * 100000); if (p > 0) src = ` l="-${p}" r="-${p}"`; }
+    const ph = idx == null ? "" : `<p:ph type="pic" sz="quarter" idx="${idx}"/>`;
+    this.items.push(`<p:pic><p:nvPicPr><p:cNvPr id="${this.id++}" name="Picture ${this.id}"/><p:cNvPicPr><a:picLocks${idx == null ? "" : ' noGrp="1"'} noChangeAspect="1"/></p:cNvPicPr><p:nvPr>${ph}</p:nvPr></p:nvPicPr><p:blipFill><a:blip r:embed="${rid}"/><a:srcRect${src}/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr>${xf(box)}${idx == null ? '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>' : ""}${extraSpPr}</p:spPr></p:pic>`);
+  }
+  xml() {
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>${this.items.join("")}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`;
+  }
+  relsXml() {
+    const L = `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/${this.layoutPath.split("/").pop()}"/>`;
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${L}${this.rels.map(r => `<Relationship Id="${r.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${r.target}"/>`).join("")}</Relationships>`;
+  }
+}
+// Pick the largest font (pt) at which the paragraphs fit the box; LVMH Sans averages about half an em per character.
+function fitPt(paras, innerW, innerH, sizes = [16, 14, 12, 11, 10, 9, 8]) {
+  for (const sz of sizes) {
+    const cpl = Math.max(8, Math.floor(innerW * 72 / (sz * 0.55)));
+    const lines = paras.reduce((n, p) => n + Math.max(1, Math.ceil(p.length / cpl)), 0);
+    if (lines * sz * 1.2 / 72 <= innerH) return sz;
+  }
+  return sizes[sizes.length - 1];
+}
+function ratioLabel(w, h) {
+  const opts = [[1, 1], [2, 3], [3, 2], [3, 4], [4, 3], [4, 5], [5, 4], [9, 16], [16, 9], [21, 9]];
+  let best = opts[0], d = 9; for (const o of opts) { const dd = Math.abs(Math.log((w / h) / (o[0] / o[1]))); if (dd < d) { d = dd; best = o; } }
+  return best.join(":");
+}
+const resLabel = (w, h) => { const m = Math.max(w, h); return m < 1800 ? "1K" : m < 3000 ? "2K" : "4K"; };
+function titleRuns(text) {
+  // the template sets titles as a bold lead plus a light remainder ("FROM SKETCH" + "TO IMAGE")
+  const t = clip(String(text || "").trim() || "Model comparison", 70);
+  // largest size that keeps the title on one line in the 6.4in title box; long titles get two lines at 20pt
+  const sz = [36, 30, 26, 22].find(z => t.length <= Math.floor(6.3 * 72 / (z * 0.68))) || 20;
+  const m = t.match(/^(.*?)\s*(?:·|—|–|-|:|\|)\s+(.+)$/);
+  const lead = m ? m[1] : t, rest = m ? m[2] : "";
+  const runs = [{ t: lead, sz }]; if (rest) runs.push({ t: " " + rest, b: false, light: true, sz });
+  return paraX(runs);
+}
+
+async function buildTemplateDeck(runs) {
+  if (typeof window.JSZip !== "function") { toast("The PowerPoint tools didn't load. Check your connection and reload the page."); return; }
+  const zip = await window.JSZip.loadAsync(template.buf);
+  const lm = await layoutMap(zip);
+  let pres = await zip.file("ppt/presentation.xml").async("string");
+  let presRels = await zip.file("ppt/_rels/presentation.xml.rels").async("string");
+  let ct = await zip.file("[Content_Types].xml").async("string");
+  // 1. remove the template's own slides (and their notes and comments)
+  presRels = presRels.replace(/<Relationship\b[^>]*\/relationships\/slide"[^>]*\/>/g, "");
+  for (const f of zip.file(/^ppt\/(slides|notesSlides|comments)\//)) zip.remove(f.name);
+  ct = ct.replace(/<Override PartName="\/ppt\/(slides|notesSlides|comments)\/[^"]*"[^>]*\/>/g, "");
+  ct = ct.replace("presentationml.template.main+xml", "presentationml.presentation.main+xml");
+  pres = pres.replace(/<p:ext uri="\{521415D9-36F7-43E2-AB2F-B90AF26B5E84\}">[\s\S]*?<\/p:ext>/, ""); // sections
+  if (/<p:sldIdLst\b/.test(pres)) pres = pres.replace(/<p:sldIdLst\/>|<p:sldIdLst>[\s\S]*?<\/p:sldIdLst>/, "<p:sldIdLst>@@SLIDES@@</p:sldIdLst>");
+  else pres = pres.replace("<p:sldSz", "<p:sldIdLst>@@SLIDES@@</p:sldIdLst><p:sldSz");
+  // 2. drop media nothing points to any more (the template's sample pictures)
+  const used = new Set();
+  for (const f of zip.file(/_rels\/[^/]+\.rels$/)) {
+    const base = f.name.replace(/_rels\/[^/]+\.rels$/, "");
+    const x = await f.async("string");
+    for (const m of x.matchAll(/Target="([^"]+)"/g)) {
+      const parts = (base + m[1]).split("/"), out = [];
+      for (const p of parts) { if (p === "..") out.pop(); else if (p !== "." && p !== "") out.push(p); }
+      used.add(out.join("/"));
+    }
+  }
+  for (const f of zip.file(/^ppt\/media\//)) if (!used.has(f.name)) zip.remove(f.name);
+  if (!/Extension="jpeg"/i.test(ct)) ct = ct.replace("<Default ", '<Default Extension="jpeg" ContentType="image/jpeg"/><Default ');
+
+  // 3. add our slides
+  let mediaN = 0; const mediaCache = new Map();
+  async function media(dataUrl, max) {
+    const key = dataUrl.length + ":" + dataUrl.slice(-64) + ":" + max;
+    if (mediaCache.has(key)) return mediaCache.get(key);
+    const j = await toJpeg(dataUrl, max); const name = `lineup-${++mediaN}.jpeg`;
+    zip.file("ppt/media/" + name, j.data.split(",")[1], { base64: true });
+    const m = { name, w: j.w, h: j.h }; mediaCache.set(key, m); return m;
+  }
+  const slides = [];
+  for (const r of runs) {
+    const title = r.title || clip(r.brief, 60) || "Model comparison";
+    const first = r.cols.find(c => c.image);
+    const ratio = first ? ratioLabel(first.image.w, first.image.h) : (r.size === "auto" ? "AUTO" : ratioLabel(...r.size.split("x").map(Number)));
+    const res = first ? resLabel(first.image.w, first.image.h) : "1K";
+    // --- overview: prompt, first reference and the three results side by side (12_Empty)
+    {
+      const L = lm[TPL_LAYOUTS.overview]; const s = new SlideX(L.path, L.xml);
+      s.text(11, paraX([{ t: " " }]));
+      s.text(27, paraX([{ t: `Model comparison · ${fmtDate(r.createdAt)}` }]));
+      s.text(28, titleRuns(title));
+      const pBox = { x: 0.39, y: 1.40, w: 4.05, h: 2.30 };
+      const brief = (r.brief || "").trim() ? clip(r.brief, 1100) : "No brief.";
+      const pp = brief.split(/\n+/);
+      const psz = fitPt(pp, pBox.w - 0.55, pBox.h - 0.16);
+      s.text(14, pp.map(t => paraX([{ t, sz: psz }])).join(""), pBox);
+      if (r.refs.length) {
+        const ib = { x: 0.39, y: 3.95, w: 1.75, h: 2.33 };
+        s.pic(15, await media(r.refs[0].data, 1400), ib, '<a:noFill/><a:ln w="15875"><a:solidFill><a:srgbClr val="D7D2CB"/></a:solidFill></a:ln>');
+        s.text(24, paraX([{ t: r.refs.length > 1 ? `@IMG1 +${r.refs.length - 1}` : "@IMG1" }]), { x: ib.x + ib.w / 2 - (r.refs.length > 1 ? 0.45 : 0.32), y: ib.y - 0.11, w: r.refs.length > 1 ? 0.9 : 0.64, h: 0.22 });
+        s.text(33, paraX([{ t: "BASED ON IA." }]) .replace("</a:p>", "") + `<a:br><a:rPr lang="en-US"/></a:br>` + runX({ t: "NOT FOR COMMERCIAL USE." }) + "</a:p>", { x: ib.x + ib.w + 0.08, y: ib.y, w: 0.29, h: ib.h });
+      }
+      s.text(18, paraX([{ t: ratio }])); s.text(19, paraX([{ t: res }])); s.text(20, paraX([{ t: `${r.cols.length} models` }]));
+      const cw = 2.62, gap = 0.12, x0 = 4.72, py = 2.12, ph = 4.55, cy = 1.32, ch = 0.72;
+      for (let i = 0; i < 3; i++) {
+        const c = r.cols[i]; if (!c) continue;
+        const x = x0 + i * (cw + gap);
+        const cap = [paraX([{ t: `${LETTERS[i]} · ${nameOf(c)}`, b: true }], '<a:pPr algn="ctr"/>')];
+        if (c.notes.trim()) cap.push(paraX([{ t: clip(c.notes, 110), sz: 9 }], '<a:pPr algn="ctr"/>'));
+        else if (c.status === "error") cap.push(paraX([{ t: "Failed: " + clip(c.error, 90), sz: 9, color: "B3261E" }], '<a:pPr algn="ctr"/>'));
+        const capBox = { x, y: cy, w: cw, h: ch };
+        if (i < 2) s.text(i === 0 ? 31 : 32, cap.join(""), capBox, '<a:bodyPr anchor="b"><a:noAutofit/></a:bodyPr>');
+        else s.textBox(cap.map(p => p.replace(/<a:rPr lang="en-US"( b="1")?( sz="900")?/, (m0, b, sz) => `<a:rPr lang="en-US"${b || ""} sz="${sz ? 900 : 1200}"`)).join(""), capBox, '<a:bodyPr wrap="square" anchor="b"><a:noAutofit/></a:bodyPr>');
+        if (c.image) s.pic(i === 0 ? 30 : i === 1 ? 10 : null, await media(c.image.data, 2200), { x, y: py, w: cw, h: ph }, '<a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>');
+      }
+      slides.push(s);
+    }
+    // --- one slide per model, in the template's prompt / inputs / output layout
+    for (let i = 0; i < r.cols.length; i++) {
+      const c = r.cols[i];
+      if (!c.image && c.status !== "error") continue;
+      const nRefs = Math.min(3, r.refs.length);
+      const L = lm[nRefs >= 3 ? TPL_LAYOUTS.three : nRefs === 2 ? TPL_LAYOUTS.two : TPL_LAYOUTS.one];
+      const s = new SlideX(L.path, L.xml);
+      s.text(11, paraX([{ t: " " }]));
+      s.text(27, paraX([{ t: `[${LETTERS[i]}] ${title}` + (NICK[c.model] ? ` · ${c.model}` : "") }]));
+      s.text(28, titleRuns(nameOf(c)));
+      const prompt = (c.prompt || r.brief || "").trim();
+      const paras = [];
+      const lines = clip(prompt || "No prompt recorded.", 900).split(/\n+/);
+      const extra = [];
+      if (c.notes.trim()) extra.push("Notes: " + clip(c.notes, 260));
+      if (c.status === "error") extra.push("Failed: " + clip(c.error, 200));
+      const pb = s.box(14) || { w: 6.38, h: 2.24 };
+      const sz = fitPt([...lines, ...extra], pb.w - 0.55, pb.h - 0.16);
+      lines.forEach(t => paras.push(paraX([{ t, sz }])));
+      extra.forEach(t => paras.push(paraX(t.startsWith("Notes: ") ? [{ t: "Notes: ", b: true, sz, color: "526EBF" }, { t: t.slice(7), sz }] : [{ t, sz, color: "B3261E" }], '<a:pPr><a:spcBef><a:spcPts val="600"/></a:spcBef></a:pPr>')));
+      s.text(14, paras.join(""), pb);
+      for (let k = 0; k < nRefs; k++) {
+        const rb = s.box(15 + k);
+        s.pic(15 + k, await media(r.refs[k].data, 1400), rb, '<a:noFill/><a:ln w="15875"><a:solidFill><a:srgbClr val="D7D2CB"/></a:solidFill></a:ln>');
+        s.text(24 + k, paraX([{ t: `@IMG${k + 1}` }]), rb ? { x: rb.x + rb.w / 2 - 0.32, y: rb.y - 0.11, w: 0.64, h: 0.22 } : null);
+      }
+      if (nRefs) s.text(33, paraX([{ t: "BASED ON IA." }]).replace("</a:p>", "") + `<a:br><a:rPr lang="en-US"/></a:br>` + runX({ t: "NOT FOR COMMERCIAL USE." }) + "</a:p>");
+      const cr = c.image ? ratioLabel(c.image.w, c.image.h) : ratio, cres = c.image ? resLabel(c.image.w, c.image.h) : res;
+      s.text(18, paraX([{ t: cr }])); s.text(19, paraX([{ t: cres }])); s.text(20, paraX([{ t: nameOf(c) }]));
+      if (c.image) s.pic(10, await media(c.image.data, 2400), null, '<a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>');
+      slides.push(s);
+    }
+  }
+  // 4. register the slides
+  const ids = [];
+  slides.forEach((s, k) => {
+    const n = k + 1;
+    zip.file(`ppt/slides/slide${n}.xml`, s.xml());
+    zip.file(`ppt/slides/_rels/slide${n}.xml.rels`, s.relsXml());
+    ct = ct.replace("</Types>", `<Override PartName="/ppt/slides/slide${n}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>`);
+    presRels = presRels.replace("</Relationships>", `<Relationship Id="rIdLineup${n}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${n}.xml"/></Relationships>`);
+    ids.push(`<p:sldId id="${255 + n}" r:id="rIdLineup${n}"/>`);
+  });
+  pres = pres.replace("@@SLIDES@@", ids.join(""));
+  zip.file("ppt/presentation.xml", pres); zip.file("ppt/_rels/presentation.xml.rels", presRels); zip.file("[Content_Types].xml", ct);
+  const app = zip.file("docProps/app.xml");
+  if (app) zip.file("docProps/app.xml", (await app.async("string")).replace(/<Slides>\d+<\/Slides>/, `<Slides>${slides.length}</Slides>`));
+  const blob = await zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation", compression: "DEFLATE" });
+  const name = runs.length === 1 ? `${slug(runs[0].title || runs[0].brief.slice(0, 40))}.pptx` : `model-comparisons-${runs.length}.pptx`;
+  await saveFile(name, blob);
+}
+async function exportDeck(runs) {
+  toast("Building the deck…", 15000);
+  try { if (template) await buildTemplateDeck(runs); else await buildDeck(runs); }
+  catch (e) { console.error(e); toast("The deck couldn't be built: " + (e?.message || e)); }
+}
+
 /* ---------- history drawer ---------- */
 const selected = new Set();
 async function openDrawer() {
@@ -953,6 +1200,17 @@ function bind() {
     const el = $("#" + b.dataset.reveal); el.type = el.type === "password" ? "text" : "password"; b.textContent = el.type === "password" ? "Show" : "Hide";
   }));
   $("#loadModels").addEventListener("click", loadModelLists);
+  $("#tplPick").addEventListener("click", () => $("#tplInput").click());
+  $("#tplInput").addEventListener("change", async e => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    try {
+      const buf = await f.arrayBuffer(); await checkTemplate(buf);
+      template = { name: f.name, buf }; renderTemplate();
+      const ok = await fileStore.put("template", template);
+      toast(ok ? `${f.name} will be used for exports.` : `${f.name} will be used until you close this page.`);
+    } catch (err) { toast(err.message || "That template couldn't be read.", 6000); }
+  });
+  $("#tplRemove").addEventListener("click", async () => { template = null; await fileStore.del("template"); renderTemplate(); toast("Template removed. Exports use plain slides."); });
   $("#savePage").addEventListener("click", () => {
     if (!PAGE_SOURCE) { toast("This page couldn't be copied."); return; }
     saveFile("model-lineup.html", new Blob([PAGE_SOURCE], { type: "text/html" }));
@@ -1000,7 +1258,7 @@ function bind() {
   // export + history
   $("#exportBtn").addEventListener("click", async () => {
     if (!run.cols.some(c => c.image)) { toast("Nothing to export yet. Generate or add at least one image."); return; }
-    toast("Building the deck…", 8000); await buildDeck([run]);
+    await exportDeck([run]);
   });
   $("#historyBtn").addEventListener("click", openDrawer);
   $("#closeDrawer").addEventListener("click", closeDrawer);
@@ -1009,7 +1267,7 @@ function bind() {
   $("#histList").addEventListener("click", async e => {
     const b = e.target.closest("button"); if (!b) return;
     if (b.dataset.open) { const r = historyCache.find(x => x.id === b.dataset.open); if (r) { r.saved = true; setRun(r); closeDrawer(); } }
-    else if (b.dataset.exp) { const r = historyCache.find(x => x.id === b.dataset.exp); if (r) { toast("Building the deck…", 8000); await buildDeck([r]); } }
+    else if (b.dataset.exp) { const r = historyCache.find(x => x.id === b.dataset.exp); if (r) await exportDeck([r]); }
     else if (b.dataset.del) {
       if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Delete for good?"; setTimeout(() => { if (b.isConnected) { b.dataset.confirm = ""; b.textContent = "Delete"; } }, 3000); return; }
       const id = b.dataset.del; await dbDel(id); selected.delete(id); historyCache = historyCache.filter(x => x.id !== id);
@@ -1019,7 +1277,7 @@ function bind() {
   });
   $("#exportSel").addEventListener("click", async () => {
     const rs = historyCache.filter(r => selected.has(r.id)).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-    if (!rs.length) return; toast("Building the deck…", 8000); await buildDeck(rs);
+    if (!rs.length) return; await exportDeck(rs);
   });
   $("#lightbox").addEventListener("click", () => ($("#lightbox").hidden = true));
   document.addEventListener("keydown", e => {
@@ -1079,6 +1337,7 @@ async function start() {
   $("#modeTag").textContent = hosted ? "Shared view" : "Local workspace";
   $("#keysLocal").hidden = hosted; $("#keysHosted").hidden = !hosted;
   fillDatalists(); renderKeyState(); bind();
+  template = await fileStore.get("template"); renderTemplate();
   const all = await dbAll();
   const last = LS.get("ml.lastRun", null);
   const pick = all.find(r => r.id === last) || all.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
