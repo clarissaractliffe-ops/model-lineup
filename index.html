@@ -320,7 +320,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 <datalist id="dl-openaiImage"></datalist>
 <datalist id="dl-openaiChat"></datalist>
 <datalist id="dl-gemini"></datalist>
-<datalist id="dl-manual"><option value="ChatGPT app"><option value="Gemini app"><option value="Midjourney"><option value="Firefly"><option value="Flux"></datalist>
+<datalist id="dl-manual"><option value="LVMH · TBD"><option value="ChatGPT app"><option value="Gemini app"><option value="Midjourney"><option value="Firefly"><option value="Flux"></datalist>
 <input type="file" id="colInput" accept="image/png,image/jpeg,image/webp" hidden>
 
 <div class="scrim" id="scrim" hidden></div>
@@ -360,16 +360,20 @@ const LS = {
 };
 
 const PROVIDERS = {
-  "openai-responses": { label: "OpenAI · Responses", route: "Chat model rewrites → image tool", key: "openai", list: "openaiChat", def: "gpt-5", heading: "Responses" },
-  "openai-images": { label: "OpenAI · Images API", route: "Original brief → image model", key: "openai", list: "openaiImage", def: "gpt-image-1", heading: "Images API" },
-  "gemini": { label: "Google · Gemini", route: "Original brief → Gemini image model", key: "google", list: "gemini", def: "gemini-2.5-flash-image", heading: "Gemini" },
+  "openai-responses": { label: "OpenAI · Responses", route: "Chat model rewrites → image tool", key: "openai", list: "openaiChat", def: "gpt-5.5-pro", heading: "Responses" },
+  "openai-images": { label: "OpenAI · Images API", route: "Original brief → image model", key: "openai", list: "openaiImage", def: "gpt-image-2.5-sunburst", heading: "Images API" },
+  "gemini": { label: "Google · Gemini", route: "Original brief → Gemini image model", key: "google", list: "gemini", def: "gemini-3-pro-image", heading: "Gemini" },
   "manual": { label: "Add by hand", route: "Result added from another app", key: null, list: "manual", def: "", heading: "Added by hand" }
 };
 const DEFAULT_LISTS = {
-  openaiImage: ["gpt-image-1", "gpt-image-1-mini", "dall-e-3"],
-  openaiChat: ["gpt-5", "gpt-5-mini", "gpt-4.1"],
-  gemini: ["gemini-2.5-flash-image", "gemini-3-pro-image-preview"]
+  openaiImage: ["gpt-image-2.5-sunburst", "gpt-image-2.5-flare", "gpt-image-2"],
+  openaiChat: ["gpt-5.5-pro", "gpt-6-astra"],
+  gemini: ["gemini-3-pro-image"]
 };
+// Friendly names shown as column headings and on slides; the model id stays underneath.
+const NICK = { "gemini-3-pro-image": "Nano Banana Pro", "gemini-3.1-flash-image": "Nano Banana 2", "gemini-3.1-flash-lite-image": "Nano Banana 2 Lite", "gpt-5.5-pro": "OpenAI Pro" };
+const nameOf = c => NICK[c.model] || c.model || PROVIDERS[c.provider].heading;
+const LVMH_LABEL = "LVMH · TBD";
 
 const keys = LS.get("ml.keys", { openai: "", google: "" });
 const lists = LS.get("ml.lists", {});
@@ -458,7 +462,7 @@ function newRunFrom(src) {
     title: src?.title || "", brief: src?.brief || "", instructions: src?.instructions || "",
     size: src?.size || "auto", quality: src?.quality || "auto",
     refs: (src?.refs || []).filter(r => !r.example).map(r => ({ ...r })),
-    cols: (src?.cols || [blankCol("openai-responses", "gpt-5", "gpt-image-1"), blankCol("openai-images", "gpt-image-1"), blankCol("gemini", "gemini-2.5-flash-image")])
+    cols: (src?.cols || [blankCol("openai-responses", "gpt-5.5-pro", "gpt-image-2.5-sunburst"), blankCol("gemini", "gemini-3-pro-image"), blankCol("manual", LVMH_LABEL)])
       .map(c => blankCol(c.provider, c.model, c.imageModel))
   };
 }
@@ -535,9 +539,10 @@ function statusHTML(c, i) {
 }
 function colHTML(c, i) {
   const p = PROVIDERS[c.provider];
-  const title = c.model || p.heading;
+  const title = nameOf(c);
+  const idNote = NICK[c.model] ? `${c.model} · ` : "";
   const route = c.source === "manual" && c.provider !== "manual" ? "Image added by hand" :
-    c.provider === "openai-responses" && c.imageModel ? `${p.route} · ${c.imageModel}` : p.route;
+    c.provider === "openai-responses" && c.imageModel ? `${idNote}${p.route} · ${c.imageModel}` : idNote + p.route;
   let frame;
   if (c.status === "running") frame = `<div class="empty"><span class="mono">Waiting on ${esc(p.heading)}…</span></div>`;
   else if (c.status === "error") frame = `<div class="errmsg"><span>${esc(c.error)}</span>${c.provider !== "manual" ? `<button type="button" class="btn small" data-act="retry" data-i="${i}">Try again</button>` : ""}</div>`;
@@ -754,9 +759,9 @@ async function buildDeck(runs) {
     const top = 1.68, imgH = 4.0;
     for (let i = 0; i < 3; i++) {
       const c = r.cols[i]; const p = PROVIDERS[c.provider]; const x = M + i * (CW + GAP);
-      s.addText([{ text: LETTERS[i] + "   ", options: { color: MUTED, bold: false } }, { text: c.model || p.heading, options: { bold: true, color: INK } }],
+      s.addText([{ text: LETTERS[i] + "   ", options: { color: MUTED, bold: false } }, { text: nameOf(c), options: { bold: true, color: INK } }],
         { x, y: top, w: CW, h: 0.32, fontSize: 13, fontFace: "Arial", fit: "shrink" });
-      const sub = (c.source === "manual" && c.provider !== "manual" ? "Added by hand" : p.label) + (c.ms && c.status === "done" ? `  ·  ${secs(c.ms)}` : "");
+      const sub = (c.source === "manual" && c.provider !== "manual" ? "Added by hand" : p.label) + (NICK[c.model] ? "  ·  " + c.model : "") + (c.ms && c.status === "done" ? `  ·  ${secs(c.ms)}` : "");
       s.addText(sub, { x, y: top + 0.3, w: CW, h: 0.24, fontSize: 9, color: MUTED, fontFace: "Arial" });
       const by = top + 0.62;
       s.addShape(pptx.ShapeType.rect, { x, y: by, w: CW, h: imgH, fill: { color: TILE }, line: { color: LINE, width: 0.75 } });
@@ -794,7 +799,7 @@ async function buildDeck(runs) {
     d.addShape(pptx.ShapeType.line, { x: M, y: py - 0.12, w: W - 2 * M, h: 0, line: { color: LINE, width: 0.75 } });
     for (let i = 0; i < 3; i++) {
       const c = r.cols[i]; const x = M + i * (CW + GAP);
-      d.addText(`${LETTERS[i]}  ${c.model || PROVIDERS[c.provider].heading}  ·  ${(c.promptLabel || "prompt").toUpperCase()}`, { x, y: py, w: CW, h: 0.26, fontSize: 9, color: MUTED, fontFace: "Arial", fit: "shrink" });
+      d.addText(`${LETTERS[i]}  ${nameOf(c)}  ·  ${(c.promptLabel || "prompt").toUpperCase()}`, { x, y: py, w: CW, h: 0.26, fontSize: 9, color: MUTED, fontFace: "Arial", fit: "shrink" });
       d.addText(clip(c.prompt || (c.provider === "manual" ? "Added by hand" : "—"), 900), { x, y: py + 0.3, w: CW, h: 2.9, fontSize: 9.5, color: INK, fontFace: "Arial", valign: "top", fit: "shrink" });
     }
   }
@@ -819,7 +824,7 @@ function renderHistory() {
       <input type="checkbox" id="sel-${r.id}" data-sel="${r.id}" ${selected.has(r.id) ? "checked" : ""} aria-label="Include in deck">
       <div style="min-width:0">
         <div class="ht">${esc(r.title || clip(r.brief, 60) || "Untitled comparison")}</div>
-        <div class="hm">${esc(fmtDate(r.createdAt))} · ${r.cols.map(c => esc(c.model || PROVIDERS[c.provider].heading)).join(" / ")}</div>
+        <div class="hm">${esc(fmtDate(r.createdAt))} · ${r.cols.map(c => esc(nameOf(c))).join(" / ")}</div>
         <div class="thumbs">${r.cols.map(c => `<span style="${c.image ? `background-image:url('${c.image.data}')` : ""}"></span>`).join("")}</div>
         <div class="hacts">
           <button type="button" class="btn small" data-open="${r.id}">Open</button>
@@ -874,13 +879,13 @@ function exampleRun() {
     refs: [{ example: true, name: "red-crewneck.png", type: "image/png", data: drawSweater({ base: "#b8322a", plain: true }), w: 600, h: 750 },
            { example: true, name: "print-swatch.png", type: "image/png", data: drawSwatch(), w: 600, h: 600 }],
     cols: [
-      { ...blankCol("openai-responses", "gpt-5", "gpt-image-1"), status: "done", ms: 51400, source: "api", image: img({ base: "#b2c5e0", leaf: "#5c7a38", seed: 2, scale: 1.4, ruffle: true }),
+      { ...blankCol("openai-responses", "gpt-5.5-pro", "gpt-image-2.5-sunburst"), status: "done", ms: 51400, source: "api", image: img({ base: "#b2c5e0", leaf: "#5c7a38", seed: 2, scale: 1.4, ruffle: true }),
         promptLabel: "Revised prompt", prompt: "Edit the reference product photo of the red crewneck. Keep the front-facing flat-lay composition, hanger, knit texture, neckline, cuffs and hem ribbing. Replace the sleeves with ruffled seams matching the second image, and recolor the whole sweater in its pale-blue ground with green brushstroke leaves at the same scale.",
         notes: "Closest to the brief. Ruffles read well; print a little large on the body." },
-      { ...blankCol("openai-images", "gpt-image-1"), status: "done", ms: 40900, source: "api", image: img({ base: "#b0c3df", leaf: "#58773a", seed: 5, scale: 1, tall: true, ruffle: true }),
-        promptLabel: "Original brief", prompt: BRIEF, notes: "Print scale is right. Hem ribbing lost." },
-      { ...blankCol("gemini", "gemini-2.5-flash-image"), status: "done", ms: 38800, source: "api", image: img({ base: "#b6c8e2", leaf: "#64813f", seed: 11, scale: 1.1 }),
-        promptLabel: "Original brief", prompt: BRIEF, text: "Here's the sweater with the leaf print applied.", notes: "Missed the sleeve shape entirely." }
+      { ...blankCol("gemini", "gemini-3-pro-image"), status: "done", ms: 40900, source: "api", image: img({ base: "#b0c3df", leaf: "#58773a", seed: 5, scale: 1, tall: true, ruffle: true }),
+        promptLabel: "Original brief", prompt: BRIEF, text: "Here's the sweater with the leaf print applied.", notes: "Print scale is right. Hem ribbing lost." },
+      { ...blankCol("manual", LVMH_LABEL), status: "empty", source: "",
+        notes: "Placeholder until the LVMH model is chosen. Drop its result here for now." }
     ]
   };
 }
@@ -896,7 +901,7 @@ function bind() {
   $("#modelRows").addEventListener("change", e => {
     const t = e.target; if (!t.id.startsWith("prov")) return;
     const i = +t.dataset.i, c = run.cols[i]; c.provider = t.value; c.model = PROVIDERS[t.value].def;
-    if (t.value === "openai-responses" && !c.imageModel) c.imageModel = "gpt-image-1";
+    if (t.value === "openai-responses" && !c.imageModel) c.imageModel = "gpt-image-2.5-sunburst";
     renderModelRows(); renderHeads(); renderRunButton(); LS.set("ml.cols", run.cols.map(c => ({ provider: c.provider, model: c.model, imageModel: c.imageModel }))); scheduleSave(run);
   });
   $("#modelRows").addEventListener("input", e => {
@@ -937,7 +942,7 @@ function bind() {
     const i = +b.dataset.i, c = run.cols[i];
     if (b.dataset.act === "pick") { pickFor = i; $("#colInput").click(); }
     else if (b.dataset.act === "retry") runCol(run, i);
-    else if (b.dataset.act === "zoom") { $("#lbImg").src = c.image.data; $("#lbCap").textContent = `${LETTERS[i]} · ${c.model || PROVIDERS[c.provider].heading} · ${c.image.w}×${c.image.h}`; $("#lightbox").hidden = false; }
+    else if (b.dataset.act === "zoom") { $("#lbImg").src = c.image.data; $("#lbCap").textContent = `${LETTERS[i]} · ${nameOf(c)} · ${c.image.w}×${c.image.h}`; $("#lightbox").hidden = false; }
     else if (b.dataset.act === "download") {
       const ext = (c.image.data.match(/^data:image\/(\w+)/) || [, "png"])[1].replace("jpeg", "jpg");
       saveFile(`${slug(run.title || "output")}-${LETTERS[i].toLowerCase()}-${slug(c.model || "image")}.${ext}`, dataURLToBlob(c.image.data));
