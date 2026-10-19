@@ -26,6 +26,7 @@
   --run: #a15c07;
   --err: #b3261e;
   --err-soft: #fbeceb;
+  --star: #b8862b;
   --shadow: 0 1px 2px rgba(20, 22, 30, .06), 0 8px 24px rgba(20, 22, 30, .06);
   --f-ui: "Hanken Grotesk", "Helvetica Neue", Arial, system-ui, sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -35,7 +36,7 @@
   :root:not([data-theme="light"]) {
     --bg: #131416; --panel: #1b1c1f; --tile: #232529; --ink: #ecedee; --muted: #a0a4a9; --faint: #6f7378;
     --line: #2d2f33; --accent: #93a5ff; --accent-soft: #23294a; --accent-ink: #0e1330;
-    --ok: #5bc48a; --run: #e3a24a; --err: #f2867d; --err-soft: #3a1f1d;
+    --ok: #5bc48a; --run: #e3a24a; --err: #f2867d; --err-soft: #3a1f1d; --star: #e3b04b;
     --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
     color-scheme: dark;
   }
@@ -43,7 +44,7 @@
 :root[data-theme="dark"] {
   --bg: #131416; --panel: #1b1c1f; --tile: #232529; --ink: #ecedee; --muted: #a0a4a9; --faint: #6f7378;
   --line: #2d2f33; --accent: #93a5ff; --accent-soft: #23294a; --accent-ink: #0e1330;
-  --ok: #5bc48a; --run: #e3a24a; --err: #f2867d; --err-soft: #3a1f1d;
+  --ok: #5bc48a; --run: #e3a24a; --err: #f2867d; --err-soft: #3a1f1d; --star: #e3b04b;
   --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
   color-scheme: dark;
 }
@@ -170,6 +171,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .col-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
 .col-foot .acts { display: flex; gap: 2px; }
 .notes { min-height: 64px; font-size: 13px; }
+.rate-row { display: flex; align-items: center; gap: 10px; }
+.rate-lbl { font-size: 12.5px; font-weight: 600; }
+.rate-val { font-size: 11.5px; color: var(--muted); margin-left: auto; }
+/* stars are laid out 5→1 and reversed, so hovering one also lights every star before it */
+.stars { display: inline-flex; flex-direction: row-reverse; }
+.star { border: 0; background: none; padding: 0 2px; font-size: 20px; line-height: 1; color: var(--line); cursor: pointer; }
+.star.on { color: var(--star); }
+.stars:hover .star { color: var(--line); }
+.stars .star:hover, .stars .star:hover ~ .star { color: var(--star); }
 .prompt { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
 .prompt .ph { display: flex; justify-content: space-between; align-items: center; }
 .prompt .pt { margin: 0; font-size: 13.5px; line-height: 1.55; max-height: 190px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding-right: 6px; }
@@ -486,7 +496,7 @@ function scheduleSave(r) {
 
 /* ---------- run model ---------- */
 function blankCol(provider, model, imageModel = "") {
-  return { provider, model, imageModel, status: "empty", ms: null, image: null, prompt: "", promptLabel: "", text: "", error: "", notes: "", source: "" };
+  return { provider, model, imageModel, status: "empty", ms: null, image: null, prompt: "", promptLabel: "", text: "", error: "", notes: "", rating: 0, source: "" };
 }
 function newRunFrom(src) {
   return {
@@ -601,6 +611,11 @@ function colHTML(c, i) {
       <span class="acts">
         ${c.image ? `<button type="button" class="btn ghost small" data-act="pick" data-i="${i}">Replace</button><button type="button" class="btn ghost small" data-act="download" data-i="${i}">Download ↓</button>` : ""}
       </span></div>
+    <div class="rate-row">
+      <span class="rate-lbl">Rating</span>
+      <div class="stars" role="group" aria-label="Rate ${LETTERS[i]}">${[5, 4, 3, 2, 1].map(v => `<button type="button" class="star${(c.rating || 0) >= v ? " on" : ""}" data-act="rate" data-i="${i}" data-v="${v}" aria-pressed="${(c.rating || 0) >= v}" aria-label="${v} star${v > 1 ? "s" : ""}">★</button>`).join("")}</div>
+      <span class="rate-val mono">${c.rating ? c.rating + " / 5" : "Not rated"}</span>
+    </div>
     <textarea class="notes" id="notes${i}" data-i="${i}" placeholder="Your notes on ${LETTERS[i]} (they go on the slide)">${esc(c.notes)}</textarea>
     ${promptBlock}
   </article>`;
@@ -780,6 +795,7 @@ async function saveFile(filename, blob) {
 function slug(s) { return (s || "comparison").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || "comparison"; }
 
 /* ---------- PowerPoint ---------- */
+const starText = n => "★".repeat(n) + "☆".repeat(5 - n);
 const clip = (s, n) => { s = String(s || "").trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s; };
 function fit(w, h, bw, bh) { const s = Math.min(bw / w, bh / h); return { w: w * s, h: h * s }; }
 async function buildDeck(runs) {
@@ -794,8 +810,20 @@ async function buildDeck(runs) {
     s.addText(r.title || clip(r.brief, 90) || "Model comparison", { x: M, y: 0.28, w: W - 2 * M, h: 0.5, fontSize: 22, bold: true, color: INK, fontFace: "Arial", fit: "shrink" });
     const meta = [fmtDate(r.createdAt), r.size === "auto" ? "Auto size" : r.size.replace("x", "×"), r.quality !== "auto" ? r.quality + " quality" : null, `${r.refs.length} reference${r.refs.length === 1 ? "" : "s"}`].filter(Boolean).join("  ·  ");
     s.addText(meta, { x: M, y: 0.76, w: W - 2 * M, h: 0.28, fontSize: 10, color: MUTED, fontFace: "Arial" });
-    if (r.title && r.brief) s.addText(clip(r.brief, 300), { x: M, y: 1.04, w: W - 2 * M, h: 0.5, fontSize: 10.5, color: "3D3F42", fontFace: "Arial", valign: "top", fit: "shrink" });
-    const top = 1.68, imgH = 4.0;
+    if (r.brief) s.addText(clip(r.brief, 300), { x: M, y: 1.04, w: 8.3, h: 0.55, fontSize: 10.5, color: "3D3F42", fontFace: "Arial", valign: "top", fit: "shrink" });
+    // references, top right
+    const nR = Math.min(4, r.refs.length);
+    if (nR) {
+      const areaR = 3.85, rh = 1.25, rw = Math.min(1.0, (areaR - (nR - 1) * 0.1) / nR);
+      for (let k = 0; k < nR; k++) {
+        const bx = W - M - (nR - k) * rw - (nR - 1 - k) * 0.1, byy = 0.3;
+        const j = await toJpeg(r.refs[k].data, 1000); const f = fit(j.w, j.h, rw, rh);
+        s.addShape(pptx.ShapeType.rect, { x: bx, y: byy, w: rw, h: rh, fill: { color: TILE }, line: { color: LINE, width: 0.75 } });
+        s.addImage({ data: j.data, x: bx + (rw - f.w) / 2, y: byy + (rh - f.h) / 2, w: f.w, h: f.h });
+        s.addText(`@IMG${k + 1}`, { x: bx, y: byy + rh + 0.02, w: rw, h: 0.2, fontSize: 8, color: MUTED, fontFace: "Arial", align: "center", margin: 0 });
+      }
+    }
+    const top = 1.68, imgH = 3.9;
     for (let i = 0; i < 3; i++) {
       const c = r.cols[i]; const p = PROVIDERS[c.provider]; const x = M + i * (CW + GAP);
       s.addText([{ text: LETTERS[i] + "   ", options: { color: MUTED, bold: false } }, { text: nameOf(c), options: { bold: true, color: INK } }],
@@ -811,35 +839,9 @@ async function buildDeck(runs) {
       } else {
         s.addText(c.status === "error" ? "Failed: " + clip(c.error, 140) : "No image", { x, y: by, w: CW, h: imgH, align: "center", valign: "middle", fontSize: 11, color: c.status === "error" ? ERR : MUTED, fontFace: "Arial" });
       }
-      if (c.notes.trim()) s.addText(clip(c.notes, 260), { x, y: by + imgH + 0.12, w: CW, h: 0.95, fontSize: 10.5, color: INK, fontFace: "Arial", valign: "top", fit: "shrink" });
-    }
-    // detail slide: brief, references, prompts
-    const hasDetail = r.brief || r.refs.length || r.cols.some(c => c.prompt && c.prompt !== r.brief);
-    if (!hasDetail) continue;
-    const d = pptx.addSlide(); d.background = { color: "FFFFFF" };
-    d.addText((r.title || "Comparison") + " · brief and references", { x: M, y: 0.28, w: W - 2 * M, h: 0.45, fontSize: 18, bold: true, color: INK, fontFace: "Arial", fit: "shrink" });
-    d.addText("BRIEF", { x: M, y: 0.92, w: 3, h: 0.24, fontSize: 9, color: MUTED, fontFace: "Arial", charSpacing: 2 });
-    d.addText(clip(r.brief, 1200) || "—", { x: M, y: 1.16, w: 7.4, h: 2.3, fontSize: 11.5, color: INK, fontFace: "Arial", valign: "top", fit: "shrink" });
-    if (r.instructions?.trim() && r.cols.some(c => c.provider === "openai-responses")) {
-      d.addText("Rewrite instructions: " + clip(r.instructions, 300), { x: M, y: 3.42, w: 7.4, h: 0.4, fontSize: 9.5, italic: true, color: MUTED, fontFace: "Arial", valign: "top", fit: "shrink" });
-    }
-    if (r.refs.length) {
-      d.addText("REFERENCES", { x: 8.3, y: 0.92, w: 3, h: 0.24, fontSize: 9, color: MUTED, fontFace: "Arial", charSpacing: 2 });
-      const box = 2.2;
-      for (let k = 0; k < r.refs.length; k++) {
-        const bx = 8.3 + (k % 2) * (box + 0.18), byy = 1.18 + Math.floor(k / 2) * (box + 0.18) * 0.62;
-        const bh = box * 0.6 + 0.0;
-        const j = await toJpeg(r.refs[k].data, 1000); const f = fit(j.w, j.h, box, bh);
-        d.addShape(pptx.ShapeType.rect, { x: bx, y: byy, w: box, h: bh, fill: { color: TILE }, line: { color: LINE, width: 0.75 } });
-        d.addImage({ data: j.data, x: bx + (box - f.w) / 2, y: byy + (bh - f.h) / 2, w: f.w, h: f.h });
-      }
-    }
-    const py = 4.05;
-    d.addShape(pptx.ShapeType.line, { x: M, y: py - 0.12, w: W - 2 * M, h: 0, line: { color: LINE, width: 0.75 } });
-    for (let i = 0; i < 3; i++) {
-      const c = r.cols[i]; const x = M + i * (CW + GAP);
-      d.addText(`${LETTERS[i]}  ${nameOf(c)}  ·  ${(c.promptLabel || "prompt").toUpperCase()}`, { x, y: py, w: CW, h: 0.26, fontSize: 9, color: MUTED, fontFace: "Arial", fit: "shrink" });
-      d.addText(clip(c.prompt || (c.provider === "manual" ? "Added by hand" : "—"), 900), { x, y: py + 0.3, w: CW, h: 2.9, fontSize: 9.5, color: INK, fontFace: "Arial", valign: "top", fit: "shrink" });
+      let ny = by + imgH + 0.08;
+      if (c.rating) { s.addText(starText(c.rating), { x, y: ny, w: CW, h: 0.28, fontSize: 13, color: "B8862B", fontFace: "Arial", margin: 0 }); ny += 0.3; }
+      if (c.notes.trim()) s.addText(clip(c.notes, 240), { x, y: ny, w: CW, h: 7.4 - ny, fontSize: 10.5, color: INK, fontFace: "Arial", valign: "top", fit: "shrink", margin: 0 });
     }
   }
   const blob = await pptx.write({ outputType: "blob" });
@@ -991,70 +993,48 @@ async function buildTemplateDeck(runs) {
     const first = r.cols.find(c => c.image);
     const ratio = first ? ratioLabel(first.image.w, first.image.h) : (r.size === "auto" ? "AUTO" : ratioLabel(...r.size.split("x").map(Number)));
     const res = first ? resLabel(first.image.w, first.image.h) : "1K";
-    // --- overview: prompt, first reference and the three results side by side (12_Empty)
-    {
-      const L = lm[TPL_LAYOUTS.overview]; const s = new SlideX(L.path, L.xml);
-      s.text(11, paraX([{ t: " " }]));
-      s.text(27, paraX([{ t: `Model comparison · ${fmtDate(r.createdAt)}` }]));
-      s.text(28, titleRuns(title));
-      const pBox = { x: 0.39, y: 1.40, w: 4.05, h: 2.30 };
-      const brief = (r.brief || "").trim() ? clip(r.brief, 1100) : "No brief.";
-      const pp = brief.split(/\n+/);
-      const psz = fitPt(pp, pBox.w - 0.55, pBox.h - 0.16);
-      s.text(14, pp.map(t => paraX([{ t, sz: psz }])).join(""), pBox);
-      if (r.refs.length) {
-        const ib = { x: 0.39, y: 3.95, w: 1.75, h: 2.33 };
-        s.pic(15, await media(r.refs[0].data, 1400), ib, '<a:noFill/><a:ln w="15875"><a:solidFill><a:srgbClr val="D7D2CB"/></a:solidFill></a:ln>');
-        s.text(24, paraX([{ t: r.refs.length > 1 ? `@IMG1 +${r.refs.length - 1}` : "@IMG1" }]), { x: ib.x + ib.w / 2 - (r.refs.length > 1 ? 0.45 : 0.32), y: ib.y - 0.11, w: r.refs.length > 1 ? 0.9 : 0.64, h: 0.22 });
-        s.text(33, paraX([{ t: "BASED ON IA." }]) .replace("</a:p>", "") + `<a:br><a:rPr lang="en-US"/></a:br>` + runX({ t: "NOT FOR COMMERCIAL USE." }) + "</a:p>", { x: ib.x + ib.w + 0.08, y: ib.y, w: 0.29, h: ib.h });
-      }
-      s.text(18, paraX([{ t: ratio }])); s.text(19, paraX([{ t: res }])); s.text(20, paraX([{ t: `${r.cols.length} models` }]));
-      const cw = 2.62, gap = 0.12, x0 = 4.72, py = 2.12, ph = 4.55, cy = 1.32, ch = 0.72;
-      for (let i = 0; i < 3; i++) {
-        const c = r.cols[i]; if (!c) continue;
-        const x = x0 + i * (cw + gap);
-        const cap = [paraX([{ t: `${LETTERS[i]} · ${nameOf(c)}`, b: true }], '<a:pPr algn="ctr"/>')];
-        if (c.notes.trim()) cap.push(paraX([{ t: clip(c.notes, 110), sz: 9 }], '<a:pPr algn="ctr"/>'));
-        else if (c.status === "error") cap.push(paraX([{ t: "Failed: " + clip(c.error, 90), sz: 9, color: "B3261E" }], '<a:pPr algn="ctr"/>'));
-        const capBox = { x, y: cy, w: cw, h: ch };
-        if (i < 2) s.text(i === 0 ? 31 : 32, cap.join(""), capBox, '<a:bodyPr anchor="b"><a:noAutofit/></a:bodyPr>');
-        else s.textBox(cap.map(p => p.replace(/<a:rPr lang="en-US"( b="1")?( sz="900")?/, (m0, b, sz) => `<a:rPr lang="en-US"${b || ""} sz="${sz ? 900 : 1200}"`)).join(""), capBox, '<a:bodyPr wrap="square" anchor="b"><a:noAutofit/></a:bodyPr>');
-        if (c.image) s.pic(i === 0 ? 30 : i === 1 ? 10 : null, await media(c.image.data, 2200), { x, y: py, w: cw, h: ph }, '<a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>');
-      }
-      slides.push(s);
-    }
-    // --- one slide per model, in the template's prompt / inputs / output layout
-    for (let i = 0; i < r.cols.length; i++) {
-      const c = r.cols[i];
-      if (!c.image && c.status !== "error") continue;
-      const nRefs = Math.min(3, r.refs.length);
-      const L = lm[nRefs >= 3 ? TPL_LAYOUTS.three : nRefs === 2 ? TPL_LAYOUTS.two : TPL_LAYOUTS.one];
-      const s = new SlideX(L.path, L.xml);
-      s.text(11, paraX([{ t: " " }]));
-      s.text(27, paraX([{ t: `[${LETTERS[i]}] ${title}` + (NICK[c.model] ? ` · ${c.model}` : "") }]));
-      s.text(28, titleRuns(nameOf(c)));
-      const prompt = (c.prompt || r.brief || "").trim();
-      const paras = [];
-      const lines = clip(prompt || "No prompt recorded.", 900).split(/\n+/);
-      const extra = [];
-      if (c.notes.trim()) extra.push("Notes: " + clip(c.notes, 260));
-      if (c.status === "error") extra.push("Failed: " + clip(c.error, 200));
-      const pb = s.box(14) || { w: 6.38, h: 2.24 };
-      const sz = fitPt([...lines, ...extra], pb.w - 0.55, pb.h - 0.16);
-      lines.forEach(t => paras.push(paraX([{ t, sz }])));
-      extra.forEach(t => paras.push(paraX(t.startsWith("Notes: ") ? [{ t: "Notes: ", b: true, sz, color: "526EBF" }, { t: t.slice(7), sz }] : [{ t, sz, color: "B3261E" }], '<a:pPr><a:spcBef><a:spcPts val="600"/></a:spcBef></a:pPr>')));
-      s.text(14, paras.join(""), pb);
+    // --- one slide per comparison: prompt, every reference and the three results with ratings (12_Empty)
+    const L = lm[TPL_LAYOUTS.overview]; const s = new SlideX(L.path, L.xml);
+    s.text(11, paraX([{ t: " " }]));
+    s.text(27, paraX([{ t: `Model comparison · ${fmtDate(r.createdAt)}` }]));
+    s.text(28, titleRuns(title));
+    const nRefs = Math.min(4, r.refs.length);
+    const pBox = { x: 0.39, y: 1.40, w: 4.05, h: nRefs ? 2.30 : 4.90 };
+    const brief = (r.brief || "").trim() ? clip(r.brief, 1100) : "No brief.";
+    const pp = brief.split(/\n+/);
+    const psz = fitPt(pp, pBox.w - 0.55, pBox.h - 0.16);
+    s.text(14, pp.map(t => paraX([{ t, sz: psz }])).join(""), pBox);
+    if (nRefs) {
+      // references in a row under the prompt, sized to share the column; the disclaimer runs up their right edge
+      const areaW = 4.05 - 0.37, gapR = 0.1;
+      const rw = Math.min(1.75, (areaW - (nRefs - 1) * gapR) / nRefs), rh = Math.min(2.33, rw * 4 / 3), ry = 3.95;
+      const tagStyle = '<a:solidFill><a:schemeClr val="bg2"><a:lumMod val="90000"/></a:schemeClr></a:solidFill>';
       for (let k = 0; k < nRefs; k++) {
-        const rb = s.box(15 + k);
-        s.pic(15 + k, await media(r.refs[k].data, 1400), rb, '<a:noFill/><a:ln w="15875"><a:solidFill><a:srgbClr val="D7D2CB"/></a:solidFill></a:ln>');
-        s.text(24 + k, paraX([{ t: `@IMG${k + 1}` }]), rb ? { x: rb.x + rb.w / 2 - 0.32, y: rb.y - 0.11, w: 0.64, h: 0.22 } : null);
+        const ib = { x: 0.39 + k * (rw + gapR), y: ry, w: rw, h: rh };
+        s.pic(k === 0 ? 15 : null, await media(r.refs[k].data, 1400), ib, '<a:noFill/><a:ln w="15875"><a:solidFill><a:srgbClr val="D7D2CB"/></a:solidFill></a:ln>');
+        const tb = { x: ib.x + ib.w / 2 - 0.32, y: ib.y - 0.11, w: 0.64, h: 0.22 };
+        if (k === 0) s.text(24, paraX([{ t: "@IMG1" }]), tb);
+        else s.items.push(`<p:sp><p:nvSpPr><p:cNvPr id="${s.id++}" name="Tag ${k + 1}"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr>${xf(tb)}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>${tagStyle}</p:spPr><p:txBody><a:bodyPr wrap="none" lIns="72000" tIns="28800" rIns="72000" bIns="36000" anchor="ctr"><a:noAutofit/></a:bodyPr><a:lstStyle/><a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="en-US" sz="900" dirty="0"><a:solidFill><a:schemeClr val="bg1"/></a:solidFill><a:latin typeface="+mj-lt"/></a:rPr><a:t>@IMG${k + 1}</a:t></a:r></a:p></p:txBody></p:sp>`);
       }
-      if (nRefs) s.text(33, paraX([{ t: "BASED ON IA." }]).replace("</a:p>", "") + `<a:br><a:rPr lang="en-US"/></a:br>` + runX({ t: "NOT FOR COMMERCIAL USE." }) + "</a:p>");
-      const cr = c.image ? ratioLabel(c.image.w, c.image.h) : ratio, cres = c.image ? resLabel(c.image.w, c.image.h) : res;
-      s.text(18, paraX([{ t: cr }])); s.text(19, paraX([{ t: cres }])); s.text(20, paraX([{ t: nameOf(c) }]));
-      if (c.image) s.pic(10, await media(c.image.data, 2400), null, '<a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>');
-      slides.push(s);
+      s.text(33, paraX([{ t: "BASED ON IA." }]).replace("</a:p>", "") + `<a:br><a:rPr lang="en-US"/></a:br>` + runX({ t: "NOT FOR COMMERCIAL USE." }) + "</a:p>",
+        { x: 0.39 + nRefs * rw + (nRefs - 1) * gapR + 0.08, y: ry, w: 0.29, h: Math.max(rh, 2.33) });
     }
+    s.text(18, paraX([{ t: ratio }])); s.text(19, paraX([{ t: res }])); s.text(20, paraX([{ t: `${r.cols.length} models` }]));
+    const cw = 2.62, gap = 0.12, x0 = 4.72, py = 2.12, ph = 4.55, cy = 1.18, ch = 0.88;
+    for (let i = 0; i < 3; i++) {
+      const c = r.cols[i]; if (!c) continue;
+      const x = x0 + i * (cw + gap);
+      const ctr = '<a:pPr algn="ctr"/>';
+      const cap = [paraX([{ t: `${LETTERS[i]} · ${nameOf(c)}`, b: true, sz: 12 }], ctr)];
+      if (c.rating) cap.push(paraX([{ t: starText(c.rating), sz: 11, color: "B8862B" }], ctr));
+      if (c.notes.trim()) cap.push(paraX([{ t: clip(c.notes, 110), sz: 9 }], ctr));
+      else if (c.status === "error") cap.push(paraX([{ t: "Failed: " + clip(c.error, 90), sz: 9, color: "B3261E" }], ctr));
+      const capBox = { x, y: cy, w: cw, h: ch };
+      if (i < 2) s.text(i === 0 ? 31 : 32, cap.join(""), capBox, '<a:bodyPr anchor="b"><a:noAutofit/></a:bodyPr>');
+      else s.textBox(cap.join(""), capBox, '<a:bodyPr wrap="square" anchor="b"><a:noAutofit/></a:bodyPr>');
+      if (c.image) s.pic(i === 0 ? 30 : i === 1 ? 10 : null, await media(c.image.data, 2200), { x, y: py, w: cw, h: ph }, '<a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>');
+    }
+    slides.push(s);
   }
   // 4. register the slides
   const ids = [];
@@ -1153,9 +1133,9 @@ function exampleRun() {
     cols: [
       { ...blankCol("openai-responses", "gpt-5.5-pro", "gpt-image-2.5-sunburst"), status: "done", ms: 51400, source: "api", image: img({ base: "#b2c5e0", leaf: "#5c7a38", seed: 2, scale: 1.4, ruffle: true }),
         promptLabel: "Revised prompt", prompt: "Edit the reference product photo of the red crewneck. Keep the front-facing flat-lay composition, hanger, knit texture, neckline, cuffs and hem ribbing. Replace the sleeves with ruffled seams matching the second image, and recolor the whole sweater in its pale-blue ground with green brushstroke leaves at the same scale.",
-        notes: "Closest to the brief. Ruffles read well; print a little large on the body." },
+        notes: "Closest to the brief. Ruffles read well; print a little large on the body.", rating: 4 },
       { ...blankCol("gemini", "gemini-3-pro-image"), status: "done", ms: 40900, source: "api", image: img({ base: "#b0c3df", leaf: "#58773a", seed: 5, scale: 1, tall: true, ruffle: true }),
-        promptLabel: "Original brief", prompt: BRIEF, text: "Here's the sweater with the leaf print applied.", notes: "Print scale is right. Hem ribbing lost." },
+        promptLabel: "Original brief", prompt: BRIEF, text: "Here's the sweater with the leaf print applied.", notes: "Print scale is right. Hem ribbing lost.", rating: 3 },
       { ...blankCol("lvmh", ""), status: "empty", source: "",
         notes: "Placeholder until the LVMH model is chosen. Add its key under API keys, or drop a result here." }
     ]
@@ -1225,6 +1205,7 @@ function bind() {
     const i = +b.dataset.i, c = run.cols[i];
     if (b.dataset.act === "pick") { pickFor = i; $("#colInput").click(); }
     else if (b.dataset.act === "retry") runCol(run, i);
+    else if (b.dataset.act === "rate") { const v = +b.dataset.v; c.rating = c.rating === v ? 0 : v; renderCol(i); scheduleSave(run); }
     else if (b.dataset.act === "zoom") { $("#lbImg").src = c.image.data; $("#lbCap").textContent = `${LETTERS[i]} · ${nameOf(c)} · ${c.image.w}×${c.image.h}`; $("#lightbox").hidden = false; }
     else if (b.dataset.act === "download") {
       const ext = (c.image.data.match(/^data:image\/(\w+)/) || [, "png"])[1].replace("jpeg", "jpg");
