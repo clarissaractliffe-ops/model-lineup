@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Model Lineup</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script data-keep src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<style>
+/* Layout: control sidebar on the left (brief, models, keys), three equal comparison columns on the right; stacks on narrow screens. */
+:root {
+  --bg: #f3f4f2;
+  --panel: #ffffff;
+  --tile: #e9eae7;
+  --ink: #18191b;
+  --muted: #676b6f;
+  --faint: #9a9da0;
+  --line: #dcdedA;
+  --accent: #2b45c4;
+  --accent-soft: #e6e9fa;
+  --accent-ink: #ffffff;
+  --ok: #2e7d4f;
+  --run: #a15c07;
+  --err: #b3261e;
+  --err-soft: #fbeceb;
+  --shadow: 0 1px 2px rgba(20, 22, 30, .06), 0 8px 24px rgba(20, 22, 30, .06);
+  --f-ui: "Hanken Grotesk", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131416; --panel: #1b1c1f; --tile: #232529; --ink: #ecedee; --muted: #a0a4a9; --faint: #6f7378;
+    --line: #2d2f33; --accent: #93a5ff; --accent-soft: #23294a; --accent-ink: #0e1330;
+    --ok: #5bc48a; --run: #e3a24a; --err: #f2867d; --err-soft: #3a1f1d;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131416; --panel: #1b1c1f; --tile: #232529; --ink: #ecedee; --muted: #a0a4a9; --faint: #6f7378;
+  --line: #2d2f33; --accent: #93a5ff; --accent-soft: #23294a; --accent-ink: #0e1330;
+  --ok: #5bc48a; --run: #e3a24a; --err: #f2867d; --err-soft: #3a1f1d;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font: 14px/1.5 var(--f-ui);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  margin: 0; -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font: 500 11px/1 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+
+/* Header */
+.top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding-block: 14px; border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand svg { flex: none; color: var(--ink); }
+.brand h1 { font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+.mode-tag { font: 500 11px/1 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding-left: 14px; border-left: 1px solid var(--line); }
+.top-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.keystate { font: 12px var(--f-mono); color: var(--muted); display: flex; gap: 12px; }
+.keystate span::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--faint); margin-right: 6px; vertical-align: 1px; }
+.keystate span.on::before { background: var(--ok); }
+
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 7px 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn:hover { border-color: var(--faint); }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn.primary:hover { opacity: .9; }
+.btn.accent { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--muted); padding-inline: 6px; }
+.btn.ghost:hover { color: var(--ink); }
+.btn.danger { color: var(--err); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.small { padding: 4px 8px; font-size: 12.5px; }
+
+/* App grid */
+.app { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 0; align-items: start; }
+aside.side { position: sticky; top: 0; max-height: 100vh; overflow-y: auto; border-right: 1px solid var(--line); padding: 20px 20px 0 0; display: flex; flex-direction: column; }
+main.main { min-width: 0; padding: 22px 0 48px 28px; container-type: inline-size; }
+
+.sec { display: flex; flex-direction: column; gap: 12px; padding-bottom: 22px; margin-bottom: 22px; border-bottom: 1px solid var(--line); }
+.sec:last-of-type { border-bottom: 0; }
+.sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.sec-head h2 { font-size: 16px; font-weight: 600; }
+.sec-head .eyebrow { letter-spacing: .05em; }
+.hint { color: var(--muted); font-size: 12.5px; line-height: 1.45; margin: 0; }
+label.lbl { font-weight: 600; font-size: 13px; display: flex; justify-content: space-between; gap: 8px; }
+label.lbl small { font-weight: 400; color: var(--muted); }
+.field { display: flex; flex-direction: column; gap: 6px; }
+input[type=text], input[type=password], select, textarea {
+  width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0;
+}
+textarea { resize: vertical; line-height: 1.5; }
+#brief { min-height: 130px; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.drop { border: 1.5px dashed var(--line); border-radius: var(--r); padding: 14px; text-align: center; color: var(--muted); font-size: 12.5px; background: transparent; width: 100%; }
+.drop strong { color: var(--ink); font-weight: 600; }
+.drop.over, .frame.over { border-color: var(--accent); background: var(--accent-soft); }
+.refs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.ref { position: relative; aspect-ratio: 1; border-radius: 6px; overflow: hidden; background: var(--tile); border: 1px solid var(--line); }
+.ref img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ref button { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgba(15,16,18,.72); color: #fff; font-size: 13px; line-height: 22px; padding: 0; }
+.ref .n { position: absolute; left: 4px; bottom: 4px; font: 500 10px/1 var(--f-mono); background: rgba(15,16,18,.72); color: #fff; padding: 3px 5px; border-radius: 3px; }
+
+.mrow { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: 10px; align-items: start; }
+.mrow + .mrow { padding-top: 12px; border-top: 1px dashed var(--line); }
+.mrow .mfields { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.letter { width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 4px; display: grid; place-items: center; font: 500 11px var(--f-mono); color: var(--muted); background: var(--panel); flex: none; }
+.subfield { font-size: 12px; color: var(--muted); }
+
+.keyrow { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px; }
+.notice { background: var(--accent-soft); border-radius: var(--r); padding: 12px 14px; font-size: 13px; display: flex; flex-direction: column; gap: 10px; }
+.notice p { margin: 0; }
+
+.runbar { position: sticky; bottom: 0; background: var(--bg); padding: 14px 0 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+.runbar .btn { justify-content: center; padding: 11px 14px; font-weight: 600; }
+.runbar .sub { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.runbar .sub .hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; font-size: 11.5px; }
+
+/* Main */
+.runhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+.runhead .meta { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.runtitle { font-size: 15px; color: var(--ink); }
+.runtitle .dot { color: var(--faint); padding: 0 6px; }
+.saved { font-size: 12px; color: var(--muted); }
+.example-band { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 14px; margin-bottom: 20px; font-size: 13px; }
+.example-band b { font-weight: 600; }
+
+.cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+@container (max-width: 760px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.col-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 10px; align-items: center; }
+.col-head h3 { font-size: 19px; font-weight: 600; letter-spacing: -.01em; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.col-head .route { grid-column: 2 / 4; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.status { font: 12px var(--f-mono); color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.status.done { color: var(--muted); }
+.status.done::before, .status.running::before, .status.error::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.status.done::before { background: var(--ok); }
+.status.running { color: var(--run); }
+.status.running::before { background: var(--run); animation: pulse 1s ease-in-out infinite; }
+.status.error { color: var(--err); }
+.status.error::before { background: var(--err); }
+@keyframes pulse { 50% { opacity: .25; } }
+
+.frame { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; max-width: 100%; display: grid; place-items: center; }
+.frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; cursor: zoom-in; }
+.frame .empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px; text-align: center; color: var(--muted); font-size: 13px; }
+.frame .empty svg { color: var(--faint); }
+.frame.running { background: linear-gradient(100deg, var(--tile) 30%, var(--panel) 50%, var(--tile) 70%) 0 0 / 300% 100%; animation: sheen 1.6s linear infinite; }
+@keyframes sheen { to { background-position: -150% 0; } }
+.frame.error { background: var(--err-soft); }
+.frame .errmsg { padding: 20px; color: var(--err); font-size: 13px; display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center; overflow-wrap: anywhere; }
+.col-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
+.col-foot .acts { display: flex; gap: 2px; }
+.notes { min-height: 64px; font-size: 13px; }
+.prompt { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.prompt .ph { display: flex; justify-content: space-between; align-items: center; }
+.prompt .pt { margin: 0; font-size: 13.5px; line-height: 1.55; max-height: 190px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding-right: 6px; }
+.prompt .ptext { color: var(--muted); font-size: 12.5px; }
+
+/* Drawer */
+.scrim { position: fixed; inset: 0; background: rgba(10,11,13,.4); z-index: 40; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 100vw); background: var(--panel); z-index: 41; display: flex; flex-direction: column; box-shadow: var(--shadow);
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); padding-right: env(safe-area-inset-right, 0px); }
+.drawer header, .drawer footer { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 1px solid var(--line); }
+.drawer footer { border-bottom: 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.drawer h2 { font-size: 17px; }
+.drawer .list { flex: 1; overflow-y: auto; padding: 8px 12px; }
+.hrow { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 10px; padding: 12px 8px; border-bottom: 1px solid var(--line); align-items: start; }
+.hrow.current { background: var(--accent-soft); border-radius: 6px; }
+.hrow .ht { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hrow .hm { font: 11.5px var(--f-mono); color: var(--muted); }
+.thumbs { display: flex; gap: 4px; margin: 8px 0; }
+.thumbs span { width: 52px; height: 52px; border-radius: 4px; background: var(--tile) center / cover no-repeat; border: 1px solid var(--line); }
+.hacts { display: flex; gap: 4px; flex-wrap: wrap; }
+.empty-list { padding: 40px 16px; text-align: center; color: var(--muted); }
+
+.lightbox { position: fixed; inset: 0; z-index: 50; background: rgba(10,11,13,.86); display: grid; place-items: center; padding: max(24px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(24px, env(safe-area-inset-left, 0px)); cursor: zoom-out; }
+.lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.lightbox .cap { position: absolute; left: 0; right: 0; bottom: max(12px, env(safe-area-inset-bottom, 0px)); text-align: center; color: #eee; font: 12px var(--f-mono); }
+
+.toast { position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 6px; z-index: 60; font-size: 13.5px; max-width: calc(100vw - 32px); box-shadow: var(--shadow); }
+
+@media (max-width: 880px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  aside.side { position: static; max-height: none; overflow: visible; border-right: 0; border-bottom: 1px solid var(--line); padding-right: 0; }
+  main.main { padding-left: 0; }
+  .runbar { position: static; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .frame.running, .status.running::before { animation: none; }
+}
+</style>
+
+<header class="top">
+  <div class="brand">
+    <svg width="30" height="26" viewBox="0 0 30 26" fill="none" aria-hidden="true"><rect x="1" y="1" width="28" height="24" rx="3" stroke="currentColor" stroke-width="1.6"/><rect x="5" y="6" width="5" height="14" rx="1" fill="currentColor"/><rect x="12.5" y="6" width="5" height="14" rx="1" fill="currentColor" opacity=".6"/><rect x="20" y="6" width="5" height="14" rx="1" fill="currentColor" opacity=".3"/></svg>
+    <h1>Model Lineup</h1>
+    <span class="mode-tag" id="modeTag">Local workspace</span>
+  </div>
+  <div class="top-actions">
+    <div class="keystate" id="keyState"></div>
+    <button class="btn" id="historyBtn" type="button">Previous runs</button>
+    <button class="btn accent" id="exportBtn" type="button">Export to PowerPoint ↗</button>
+  </div>
+</header>
+
+<div class="app">
+  <aside class="side">
+    <section class="sec">
+      <div class="sec-head"><h2>Shared input</h2><span class="eyebrow mono">01</span></div>
+      <p class="hint">One brief and the same references go to all three models.</p>
+      <div class="field">
+        <label class="lbl" for="runTitle">Comparison name <small>slide title</small></label>
+        <input type="text" id="runTitle" placeholder="e.g. Sweater · sleeve + print transfer">
+      </div>
+      <div class="field">
+        <label class="lbl" for="brief">Image brief</label>
+        <textarea id="brief" placeholder="Describe the image you want, or what to change in the reference images."></textarea>
+      </div>
+      <div class="field">
+        <label class="lbl">Reference images <small class="mono" id="refCount">0 / 4</small></label>
+        <button type="button" class="drop" id="refDrop"><strong>Add images</strong> or drop them here<br><span class="mono">PNG, JPG or WebP · paste works too</span></button>
+        <input type="file" id="refInput" accept="image/png,image/jpeg,image/webp" multiple hidden>
+        <div class="refs" id="refs"></div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head"><h2>Models</h2><span class="eyebrow mono">02</span></div>
+      <p class="hint">Pick a provider and model for each column. “Add by hand” is for results from apps like ChatGPT or Midjourney: drop the image into the column.</p>
+      <div id="modelRows"></div>
+      <div class="field" id="instrField" hidden>
+        <label class="lbl" for="instructions">Rewrite instructions <small>Responses columns</small></label>
+        <textarea id="instructions" rows="3" placeholder="Optional. For example: keep every constraint in the brief and don't add creative details."></textarea>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label class="lbl" for="size">Size</label>
+          <select id="size">
+            <option value="auto">Auto</option>
+            <option value="1024x1024">Square · 1024×1024</option>
+            <option value="1024x1536">Portrait · 1024×1536</option>
+            <option value="1536x1024">Landscape · 1536×1024</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="lbl" for="quality">Quality</label>
+          <select id="quality">
+            <option value="auto">Auto</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+      </div>
+      <p class="hint">Quality only applies to OpenAI models. Gemini gets the matching aspect ratio.</p>
+    </section>
+
+    <section class="sec" id="keysSec">
+      <div class="sec-head"><h2>API keys</h2><span class="eyebrow mono">03</span></div>
+      <div id="keysLocal" class="field" style="gap:12px">
+        <p class="hint">Saved in this browser only and sent straight to the provider, nowhere else.</p>
+        <div class="field">
+          <label class="lbl" for="keyOpenai">OpenAI</label>
+          <div class="keyrow"><input type="password" id="keyOpenai" placeholder="sk-…" autocomplete="off" spellcheck="false"><button type="button" class="btn small" data-reveal="keyOpenai">Show</button></div>
+        </div>
+        <div class="field">
+          <label class="lbl" for="keyGoogle">Google AI Studio</label>
+          <div class="keyrow"><input type="password" id="keyGoogle" placeholder="AIza…" autocomplete="off" spellcheck="false"><button type="button" class="btn small" data-reveal="keyGoogle">Show</button></div>
+        </div>
+        <button type="button" class="btn" id="loadModels">Load my model lists</button>
+        <p class="hint" id="modelsLoaded"></p>
+      </div>
+      <div id="keysHosted" class="notice" hidden>
+        <p><b>Live generation runs from your computer.</b> This shared view can't reach OpenAI or Google. Save the page, open the file in your browser, and add your keys there.</p>
+        <p>Here you can still drop in results from any app and export the PowerPoint.</p>
+        <button type="button" class="btn" id="savePage">Save page to my computer</button>
+      </div>
+    </section>
+
+    <div class="runbar">
+      <button type="button" class="btn primary" id="runBtn">Generate</button>
+      <div class="sub">
+        <button type="button" class="btn ghost small" id="newBtn">+ New comparison</button>
+        <span class="hint mono" id="runHint"></span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="runhead">
+      <div class="meta">
+        <span class="eyebrow">Side by side</span>
+        <div class="runtitle mono" id="runMeta"></div>
+        <span class="saved" id="savedState"></span>
+      </div>
+    </div>
+    <div class="example-band" id="exampleBand" hidden>
+      <span><b>Example comparison.</b> Generating or dropping in an image starts your own; this one isn't saved.</span>
+      <button type="button" class="btn small" id="startOwn">Start my own</button>
+    </div>
+    <div class="cols" id="cols"></div>
+  </main>
+</div>
+
+<datalist id="dl-openaiImage"></datalist>
+<datalist id="dl-openaiChat"></datalist>
+<datalist id="dl-gemini"></datalist>
+<datalist id="dl-manual"><option value="ChatGPT app"><option value="Gemini app"><option value="Midjourney"><option value="Firefly"><option value="Flux"></datalist>
+<input type="file" id="colInput" accept="image/png,image/jpeg,image/webp" hidden>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Previous runs">
+  <header><h2>Previous runs</h2><button type="button" class="btn ghost" id="closeDrawer">Close</button></header>
+  <div class="list" id="histList"></div>
+  <footer>
+    <span class="hint" id="selCount">Tick runs to put them in one deck.</span>
+    <button type="button" class="btn accent" id="exportSel" disabled>Export selected</button>
+  </footer>
+</aside>
+
+<div class="lightbox" id="lightbox" hidden><img id="lbImg" alt=""><div class="cap" id="lbCap"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script data-keep>
+(() => {
+"use strict";
+// Captured before anything renders, so "Save page" hands over a clean copy.
+const PAGE_SOURCE = (() => {
+  try {
+    const c = document.documentElement.cloneNode(true);
+    c.querySelectorAll("script:not([data-keep])").forEach(s => s.remove());
+    return "<!doctype html>\n" + c.outerHTML;
+  } catch (e) { return null; }
+})();
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const LETTERS = ["A", "B", "C"];
+const isLocalHost = location.protocol === "file:" || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+let hosted = !isLocalHost && typeof window.claude?.use === "function";
+
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+
+const PROVIDERS = {
+  "openai-responses": { label: "OpenAI · Responses", route: "Chat model rewrites → image tool", key: "openai", list: "openaiChat", def: "gpt-5", heading: "Responses" },
+  "openai-images": { label: "OpenAI · Images API", route: "Original brief → image model", key: "openai", list: "openaiImage", def: "gpt-image-1", heading: "Images API" },
+  "gemini": { label: "Google · Gemini", route: "Original brief → Gemini image model", key: "google", list: "gemini", def: "gemini-2.5-flash-image", heading: "Gemini" },
+  "manual": { label: "Add by hand", route: "Result added from another app", key: null, list: "manual", def: "", heading: "Added by hand" }
+};
+const DEFAULT_LISTS = {
+  openaiImage: ["gpt-image-1", "gpt-image-1-mini", "dall-e-3"],
+  openaiChat: ["gpt-5", "gpt-5-mini", "gpt-4.1"],
+  gemini: ["gemini-2.5-flash-image", "gemini-3-pro-image-preview"]
+};
+
+const keys = LS.get("ml.keys", { openai: "", google: "" });
+const lists = LS.get("ml.lists", {});
+let run = null;           // the comparison on screen
+let historyCache = [];
+const controllers = new Set();
+
+/* ---------- small utilities ---------- */
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+let toastTimer;
+function toast(msg, ms = 3200) {
+  const t = $("#toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.hidden = true), ms);
+}
+function fmtDate(iso) {
+  try { return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
+  catch (e) { return iso; }
+}
+const secs = ms => (ms / 1000).toFixed(1) + "s";
+function fileToDataURL(file) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(file); });
+}
+function dataURLToBlob(d) {
+  const [head, b64] = d.split(","); const mime = head.match(/:(.*?);/)[1];
+  const bin = atob(b64); const u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return new Blob([u], { type: mime });
+}
+function loadImg(src) {
+  return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("Image didn't load")); i.src = src; });
+}
+async function imageDims(src) { const i = await loadImg(src); return { w: i.naturalWidth, h: i.naturalHeight }; }
+async function toJpeg(src, max = 1800) {
+  const i = await loadImg(src);
+  const s = Math.min(1, max / Math.max(i.naturalWidth, i.naturalHeight));
+  const c = document.createElement("canvas"); c.width = Math.round(i.naturalWidth * s); c.height = Math.round(i.naturalHeight * s);
+  const x = c.getContext("2d"); x.fillStyle = "#ffffff"; x.fillRect(0, 0, c.width, c.height); x.drawImage(i, 0, 0, c.width, c.height);
+  return { data: c.toDataURL("image/jpeg", 0.9), w: c.width, h: c.height };
+}
+const ACCEPT = ["image/png", "image/jpeg", "image/webp"];
+async function readImageFile(file) {
+  if (!ACCEPT.includes(file.type)) throw new Error(`${file.name || "That file"} isn't a PNG, JPG or WebP image.`);
+  const data = await fileToDataURL(file); const d = await imageDims(data);
+  return { name: file.name || "image.png", type: file.type, data, w: d.w, h: d.h };
+}
+
+/* ---------- storage: runs in IndexedDB ---------- */
+let dbp = null;
+function idb() {
+  if (!dbp) dbp = new Promise((res, rej) => {
+    try { const r = indexedDB.open("model-lineup", 1); r.onupgradeneeded = () => r.result.createObjectStore("runs", { keyPath: "id" }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }
+    catch (e) { rej(e); }
+  });
+  return dbp;
+}
+async function dbAll() {
+  try { const d = await idb(); return await new Promise((res, rej) => { const q = d.transaction("runs").objectStore("runs").getAll(); q.onsuccess = () => res(q.result || []); q.onerror = () => rej(q.error); }); }
+  catch (e) { return []; }
+}
+async function dbPut(r) {
+  try { const d = await idb(); await new Promise((res, rej) => { const t = d.transaction("runs", "readwrite"); t.objectStore("runs").put(JSON.parse(JSON.stringify(r))); t.oncomplete = res; t.onerror = () => rej(t.error); }); return true; }
+  catch (e) { return false; }
+}
+async function dbDel(id) {
+  try { const d = await idb(); await new Promise((res, rej) => { const t = d.transaction("runs", "readwrite"); t.objectStore("runs").delete(id); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+  catch (e) {}
+}
+const saveTimers = new Map();
+function scheduleSave(r) {
+  if (!r || r.example) return;
+  clearTimeout(saveTimers.get(r.id));
+  saveTimers.set(r.id, setTimeout(async () => {
+    const ok = await dbPut(r);
+    r.saved = ok;
+    if (r === run) renderSaved();
+  }, 400));
+}
+
+/* ---------- run model ---------- */
+function blankCol(provider, model, imageModel = "") {
+  return { provider, model, imageModel, status: "empty", ms: null, image: null, prompt: "", promptLabel: "", text: "", error: "", notes: "", source: "" };
+}
+function newRunFrom(src) {
+  return {
+    id: uid(), createdAt: new Date().toISOString(),
+    title: src?.title || "", brief: src?.brief || "", instructions: src?.instructions || "",
+    size: src?.size || "auto", quality: src?.quality || "auto",
+    refs: (src?.refs || []).filter(r => !r.example).map(r => ({ ...r })),
+    cols: (src?.cols || [blankCol("openai-responses", "gpt-5", "gpt-image-1"), blankCol("openai-images", "gpt-image-1"), blankCol("gemini", "gemini-2.5-flash-image")])
+      .map(c => blankCol(c.provider, c.model, c.imageModel))
+  };
+}
+function ensureOwnRun() {
+  if (run.example) { setRun(newRunFrom(run)); toast("Started your own comparison."); }
+}
+function setRun(r) {
+  run = r;
+  renderSidebar(); renderCols(); renderMeta();
+  LS.set("ml.lastRun", r.example ? null : r.id);
+}
+
+/* ---------- sidebar ---------- */
+function renderModelRows() {
+  $("#modelRows").innerHTML = run.cols.map((c, i) => `
+    <div class="mrow">
+      <span class="letter">${LETTERS[i]}</span>
+      <div class="mfields">
+        <select id="prov${i}" data-i="${i}" aria-label="Column ${LETTERS[i]} provider">
+          ${Object.entries(PROVIDERS).map(([k, p]) => `<option value="${k}"${k === c.provider ? " selected" : ""}>${esc(p.label)}</option>`).join("")}
+        </select>
+        <input type="text" id="model${i}" data-i="${i}" list="dl-${PROVIDERS[c.provider].list}" value="${esc(c.model)}"
+          placeholder="${c.provider === "manual" ? "Name it, e.g. ChatGPT app" : "Model id"}" aria-label="Column ${LETTERS[i]} model" spellcheck="false">
+        ${c.provider === "openai-responses" ? `<label class="subfield" for="imgModel${i}">Image tool model <span class="mono">(optional)</span></label>
+        <input type="text" id="imgModel${i}" data-i="${i}" list="dl-openaiImage" value="${esc(c.imageModel)}" placeholder="Default image model" spellcheck="false">` : ""}
+      </div>
+    </div>`).join("");
+  $("#instrField").hidden = !run.cols.some(c => c.provider === "openai-responses");
+}
+function renderRefs() {
+  $("#refs").innerHTML = run.refs.map((r, i) => `
+    <div class="ref"><img src="${r.data}" alt="Reference ${i + 1}"><span class="n">${i + 1}</span>
+    <button type="button" data-rmref="${i}" aria-label="Remove reference ${i + 1}">×</button></div>`).join("");
+  $("#refCount").textContent = `${run.refs.length} / 4`;
+  $("#refDrop").hidden = run.refs.length >= 4;
+}
+function renderSidebar() {
+  $("#runTitle").value = run.title; $("#brief").value = run.brief; $("#instructions").value = run.instructions;
+  $("#size").value = run.size; $("#quality").value = run.quality;
+  renderModelRows(); renderRefs(); renderRunButton();
+}
+function apiCols() { return run.cols.map((c, i) => i).filter(i => run.cols[i].provider !== "manual"); }
+function renderRunButton() {
+  const b = $("#runBtn"); const n = apiCols().length;
+  if (controllers.size) { b.textContent = "Stop"; b.disabled = false; $("#runHint").textContent = "Generating…"; return; }
+  if (hosted) { b.textContent = "Generate on your computer"; b.disabled = true; $("#runHint").textContent = "Manual mode"; return; }
+  b.disabled = n === 0;
+  b.textContent = n === 0 ? "No API columns" : `Generate ${n} ${n === 1 ? "output" : "outputs"}`;
+  const ks = ["openai", "google"].filter(k => run.cols.some(c => PROVIDERS[c.provider].key === k) && !keys[k]);
+  $("#runHint").textContent = ks.length ? `Needs ${ks.map(k => k === "openai" ? "OpenAI" : "Google").join(" + ")} key` : (run.refs.length ? `${run.refs.length} ref${run.refs.length > 1 ? "s" : ""} attached` : "Text only");
+}
+function renderKeyState() {
+  if (hosted) { $("#keyState").innerHTML = `<span>Live generation off in this view</span>`; return; }
+  $("#keyState").innerHTML = `<span class="${keys.openai ? "on" : ""}">OpenAI</span><span class="${keys.google ? "on" : ""}">Google</span>`;
+}
+function fillDatalists() {
+  for (const k of Object.keys(DEFAULT_LISTS)) {
+    const ids = [...new Set([...(lists[k] || []), ...DEFAULT_LISTS[k]])];
+    $("#dl-" + k).innerHTML = ids.map(id => `<option value="${esc(id)}">`).join("");
+  }
+  const n = Object.values(lists).reduce((a, l) => a + (l?.length || 0), 0);
+  $("#modelsLoaded").textContent = n ? `${n} models from your accounts are in the model menus.` : "Fills the model menus with the models your keys can use.";
+}
+
+/* ---------- main columns ---------- */
+function ratioFor(r) {
+  return { "1024x1024": "1 / 1", "1024x1536": "2 / 3", "1536x1024": "3 / 2" }[r.size] || "4 / 5";
+}
+function statusHTML(c, i) {
+  if (c.status === "running") return `<span class="status running" data-elapsed="${i}">Running · 0.0s</span>`;
+  if (c.status === "error") return `<span class="status error">Failed${c.ms ? " · " + secs(c.ms) : ""}</span>`;
+  if (c.status === "done") return `<span class="status done">${c.source === "manual" ? "Added" : "Done"}${c.ms ? " · " + secs(c.ms) : ""}</span>`;
+  return `<span class="status">${c.provider === "manual" ? "Waiting for image" : "Ready"}</span>`;
+}
+function colHTML(c, i) {
+  const p = PROVIDERS[c.provider];
+  const title = c.model || p.heading;
+  const route = c.source === "manual" && c.provider !== "manual" ? "Image added by hand" :
+    c.provider === "openai-responses" && c.imageModel ? `${p.route} · ${c.imageModel}` : p.route;
+  let frame;
+  if (c.status === "running") frame = `<div class="empty"><span class="mono">Waiting on ${esc(p.heading)}…</span></div>`;
+  else if (c.status === "error") frame = `<div class="errmsg"><span>${esc(c.error)}</span>${c.provider !== "manual" ? `<button type="button" class="btn small" data-act="retry" data-i="${i}">Try again</button>` : ""}</div>`;
+  else if (c.image) frame = `<img src="${c.image.data}" alt="Output ${LETTERS[i]} from ${esc(title)}" data-act="zoom" data-i="${i}">`;
+  else frame = `<div class="empty"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.8"/><path d="M21 15l-5-5L5 21"/></svg>
+      <span>${c.provider === "manual" ? "Drop or paste the result here" : "Generate, or drop an image here"}</span>
+      <button type="button" class="btn small" data-act="pick" data-i="${i}">Choose image</button></div>`;
+  const dims = c.image ? `${c.image.w}×${c.image.h}` : "No image";
+  const promptBlock = c.prompt || c.text ? `
+    <div class="prompt">
+      <div class="ph"><span class="eyebrow">${esc(c.promptLabel || "Prompt sent")}</span>${c.prompt ? `<button type="button" class="btn ghost small" data-act="copy" data-i="${i}">Copy</button>` : ""}</div>
+      ${c.prompt ? `<p class="pt">${esc(c.prompt)}</p>` : ""}
+      ${c.text ? `<p class="pt ptext">Model said: ${esc(c.text)}</p>` : ""}
+    </div>` : "";
+  return `
+  <article class="col" data-col="${i}">
+    <div class="col-head">
+      <span class="letter">${LETTERS[i]}</span><h3 title="${esc(title)}">${esc(title)}</h3>${statusHTML(c, i)}
+      <span class="route">${esc(route)}</span>
+    </div>
+    <div class="frame ${c.status}" tabindex="0" data-frame="${i}" style="aspect-ratio:${ratioFor(run)}" aria-label="Column ${LETTERS[i]} image. Drop or paste an image to replace it.">${frame}</div>
+    <div class="col-foot"><span class="mono">${dims}</span>
+      <span class="acts">
+        ${c.image ? `<button type="button" class="btn ghost small" data-act="pick" data-i="${i}">Replace</button><button type="button" class="btn ghost small" data-act="download" data-i="${i}">Download ↓</button>` : ""}
+      </span></div>
+    <textarea class="notes" id="notes${i}" data-i="${i}" placeholder="Your notes on ${LETTERS[i]} (they go on the slide)">${esc(c.notes)}</textarea>
+    ${promptBlock}
+  </article>`;
+}
+function renderCols() {
+  // keep focus/typing in notes intact by only rebuilding what changed
+  $("#cols").innerHTML = run.cols.map(colHTML).join("");
+  $("#exampleBand").hidden = !run.example;
+}
+function renderCol(i) {
+  const el = document.querySelector(`[data-col="${i}"]`);
+  if (!el) return renderCols();
+  const active = document.activeElement?.id === `notes${i}`;
+  const tmp = document.createElement("div"); tmp.innerHTML = colHTML(run.cols[i], i);
+  el.replaceWith(tmp.firstElementChild);
+  if (active) $(`#notes${i}`).focus();
+}
+function renderHeads() {
+  run.cols.forEach((c, i) => {
+    const el = document.querySelector(`[data-col="${i}"] .col-head`); if (!el) return;
+    const tmp = document.createElement("div"); tmp.innerHTML = colHTML(c, i);
+    el.replaceWith(tmp.querySelector(".col-head"));
+  });
+}
+function renderMeta() {
+  const models = run.cols.filter(c => c.model).length;
+  const parts = [fmtDate(run.createdAt), run.size === "auto" ? "Auto size" : run.size.replace("x", "×"), `${run.refs.length} reference${run.refs.length === 1 ? "" : "s"}`];
+  $("#runMeta").innerHTML = (run.title ? `<b style="font-family:var(--f-ui);font-weight:600">${esc(run.title)}</b><span class="dot">·</span>` : "") + parts.map(esc).join('<span class="dot">·</span>');
+  renderSaved();
+}
+function renderSaved() {
+  $("#savedState").textContent = run.example ? "Example, not saved" : run.saved ? "Saved on this computer" : (run.brief || run.cols.some(c => c.image)) ? "Saving…" : "Not saved yet. Add a brief or an image.";
+}
+
+/* ---------- generation ---------- */
+class UserError extends Error {}
+async function readJSON(r) {
+  const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch (e) {}
+  if (!r.ok) throw new UserError(j?.error?.message || `${r.status} ${r.statusText || "error"} from the provider.`);
+  return j;
+}
+const GEN = {
+  async "openai-images"(r, c, signal) {
+    const fmt = { Authorization: "Bearer " + keys.openai };
+    let res;
+    if (r.refs.length) {
+      const fd = new FormData();
+      fd.append("model", c.model); fd.append("prompt", r.brief);
+      if (r.size !== "auto") fd.append("size", r.size);
+      if (r.quality !== "auto") fd.append("quality", r.quality);
+      r.refs.forEach((f, i) => fd.append("image[]", dataURLToBlob(f.data), f.name || `reference-${i + 1}.png`));
+      res = await fetch("https://api.openai.com/v1/images/edits", { method: "POST", headers: fmt, body: fd, signal });
+    } else {
+      const body = { model: c.model, prompt: r.brief, n: 1 };
+      if (r.size !== "auto") body.size = r.size;
+      if (r.quality !== "auto") body.quality = r.quality;
+      if (/^dall-e/.test(c.model)) body.response_format = "b64_json";
+      res = await fetch("https://api.openai.com/v1/images/generations", { method: "POST", headers: { ...fmt, "Content-Type": "application/json" }, body: JSON.stringify(body), signal });
+    }
+    const j = await readJSON(res);
+    const d = j?.data?.[0];
+    if (!d?.b64_json) throw new UserError("The response had no image in it.");
+    return { image: `data:image/${j.output_format || "png"};base64,${d.b64_json}`, prompt: d.revised_prompt || r.brief, promptLabel: d.revised_prompt ? "Revised prompt" : "Original brief" };
+  },
+  async "openai-responses"(r, c, signal) {
+    const content = [{ type: "input_text", text: r.brief }, ...r.refs.map(f => ({ type: "input_image", image_url: f.data }))];
+    const tool = { type: "image_generation" };
+    if (c.imageModel) tool.model = c.imageModel;
+    if (r.size !== "auto") tool.size = r.size;
+    if (r.quality !== "auto") tool.quality = r.quality;
+    const body = { model: c.model, input: [{ role: "user", content }], tools: [tool], tool_choice: { type: "image_generation" } };
+    if (r.instructions.trim()) body.instructions = r.instructions.trim();
+    const res = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers: { Authorization: "Bearer " + keys.openai, "Content-Type": "application/json" }, body: JSON.stringify(body), signal });
+    const j = await readJSON(res);
+    const out = j?.output || [];
+    const call = out.find(o => o.type === "image_generation_call" && o.result);
+    const text = out.filter(o => o.type === "message").flatMap(o => o.content || []).filter(x => x.type === "output_text").map(x => x.text).join("\n").trim();
+    if (!call) throw new UserError(text ? `No image came back. The model said: ${text}` : "No image came back from the image tool.");
+    return { image: `data:image/${call.output_format || "png"};base64,${call.result}`, prompt: call.revised_prompt || r.brief, promptLabel: call.revised_prompt ? "Revised prompt" : "Original brief", text };
+  },
+  async gemini(r, c, signal) {
+    const model = c.model.replace(/^models\//, "");
+    const parts = [{ text: r.brief }, ...r.refs.map(f => ({ inlineData: { mimeType: f.type, data: f.data.split(",")[1] } }))];
+    const gc = { responseModalities: ["TEXT", "IMAGE"] };
+    const ar = { "1024x1024": "1:1", "1024x1536": "2:3", "1536x1024": "3:2" }[r.size];
+    if (ar) gc.imageConfig = { aspectRatio: ar };
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": keys.google },
+      body: JSON.stringify({ contents: [{ role: "user", parts }], generationConfig: gc }), signal
+    });
+    const j = await readJSON(res);
+    const cand = j?.candidates?.[0];
+    const ps = cand?.content?.parts || [];
+    const img = ps.map(p => p.inlineData || p.inline_data).find(Boolean);
+    const text = ps.filter(p => p.text && !p.thought).map(p => p.text).join("\n").trim();
+    if (!img) throw new UserError(text ? `No image came back. Gemini said: ${text}` : `No image came back${cand?.finishReason ? ` (${cand.finishReason})` : ""}. ${j?.promptFeedback?.blockReason ? "Blocked: " + j.promptFeedback.blockReason : ""}`.trim());
+    return { image: `data:${img.mimeType || img.mime_type || "image/png"};base64,${img.data}`, prompt: r.brief, promptLabel: "Original brief", text };
+  }
+};
+
+async function runCol(r, i) {
+  const c = r.cols[i]; const p = PROVIDERS[c.provider];
+  if (c.provider === "manual") return;
+  if (!keys[p.key]) { c.status = "error"; c.error = `Add your ${p.key === "openai" ? "OpenAI" : "Google"} key under API keys, then try again.`; if (r === run) renderCol(i); return; }
+  if (!c.model.trim()) { c.status = "error"; c.error = "Pick a model for this column first."; if (r === run) renderCol(i); return; }
+  const ctrl = new AbortController(); controllers.add(ctrl); renderRunButton();
+  c.status = "running"; c.error = ""; c.started = performance.now(); c.image = null; c.prompt = ""; c.text = ""; c.source = "api";
+  if (r === run) renderCol(i);
+  try {
+    const out = await GEN[c.provider](r, c, ctrl.signal);
+    const d = await imageDims(out.image);
+    Object.assign(c, { image: { data: out.image, w: d.w, h: d.h }, prompt: out.prompt, promptLabel: out.promptLabel, text: out.text || "", status: "done" });
+  } catch (e) {
+    c.status = "error";
+    c.error = e.name === "AbortError" ? "Stopped." :
+      e instanceof UserError ? e.message :
+      `Couldn't reach ${p.heading}. Check your connection. If you opened this page from a website rather than a file on your computer, the browser may be blocking the call.`;
+  }
+  c.ms = Math.round(performance.now() - c.started); delete c.started;
+  controllers.delete(ctrl); renderRunButton();
+  if (r === run) { renderCol(i); renderMeta(); }
+  scheduleSave(r);
+}
+async function generate() {
+  if (controllers.size) { controllers.forEach(c => c.abort()); return; }
+  if (hosted) return;
+  if (!run.brief.trim()) { toast("Write a brief first."); $("#brief").focus(); return; }
+  const idx = apiCols(); if (!idx.length) return;
+  if (run.example || run.cols.some(c => c.image || c.status === "error")) setRun(newRunFrom(run));
+  run.createdAt = new Date().toISOString(); renderMeta();
+  const r = run;
+  await Promise.all(idx.map(i => runCol(r, i)));
+}
+
+/* ---------- images added by hand ---------- */
+async function setColImage(i, file) {
+  try {
+    const img = await readImageFile(file);
+    ensureOwnRun();
+    const c = run.cols[i];
+    Object.assign(c, { image: { data: img.data, w: img.w, h: img.h }, status: "done", source: "manual", ms: null, error: "" });
+    if (c.provider === "manual") { c.prompt = ""; c.text = ""; }
+    renderCol(i); renderMeta(); scheduleSave(run);
+  } catch (e) { toast(e.message); }
+}
+async function addRefs(files) {
+  const list = [...files];
+  if (!list.length) return;
+  if (run.example) ensureOwnRun();
+  for (const f of list) {
+    if (run.refs.length >= 4) { toast("Four references is the limit."); break; }
+    try { run.refs.push(await readImageFile(f)); } catch (e) { toast(e.message); }
+  }
+  renderRefs(); renderRunButton(); renderMeta(); scheduleSave(run);
+}
+
+/* ---------- files out ---------- */
+async function saveFile(filename, blob) {
+  if (hosted) {
+    let dl = null; try { dl = await window.claude.use("downloads"); } catch (e) {}
+    if (!dl) { toast("Saving files isn't available in this view."); return; }
+    try { await dl.save({ filename, data: blob }); toast("Saved " + filename); }
+    catch (e) { if (e?.code !== "declined") toast(e?.message || "That file couldn't be saved."); }
+    return;
+  }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast("Saved " + filename);
+}
+function slug(s) { return (s || "comparison").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || "comparison"; }
+
+/* ---------- PowerPoint ---------- */
+const clip = (s, n) => { s = String(s || "").trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s; };
+function fit(w, h, bw, bh) { const s = Math.min(bw / w, bh / h); return { w: w * s, h: h * s }; }
+async function buildDeck(runs) {
+  if (typeof window.PptxGenJS !== "function") { toast("The PowerPoint library didn't load. Check your connection and reload the page."); return; }
+  const pptx = new window.PptxGenJS();
+  pptx.layout = "LAYOUT_WIDE"; // 13.33 × 7.5 in
+  pptx.title = runs.length === 1 ? (runs[0].title || "Model comparison") : "Model comparisons";
+  const INK = "18191B", MUTED = "6B6F72", LINE = "DCDEDA", TILE = "F1F2EF", ERR = "B3261E";
+  const W = 13.333, M = 0.45, GAP = 0.3, CW = (W - 2 * M - 2 * GAP) / 3;
+  for (const r of runs) {
+    const s = pptx.addSlide(); s.background = { color: "FFFFFF" };
+    s.addText(r.title || clip(r.brief, 90) || "Model comparison", { x: M, y: 0.28, w: W - 2 * M, h: 0.5, fontSize: 22, bold: true, color: INK, fontFace: "Arial", fit: "shrink" });
+    const meta = [fmtDate(r.createdAt), r.size === "auto" ? "Auto size" : r.size.replace("x", "×"), r.quality !== "auto" ? r.quality + " quality" : null, `${r.refs.length} reference${r.refs.length === 1 ? "" : "s"}`].filter(Boolean).join("  ·  ");
+    s.addText(meta, { x: M, y: 0.76, w: W - 2 * M, h: 0.28, fontSize: 10, color: MUTED, fontFace: "Arial" });
+    if (r.title && r.brief) s.addText(clip(r.brief, 300), { x: M, y: 1.04, w: W - 2 * M, h: 0.5, fontSize: 10.5, color: "3D3F42", fontFace: "Arial", valign: "top", fit: "shrink" });
+    const top = 1.68, imgH = 4.0;
+    for (let i = 0; i < 3; i++) {
+      const c = r.cols[i]; const p = PROVIDERS[c.provider]; const x = M + i * (CW + GAP);
+      s.addText([{ text: LETTERS[i] + "   ", options: { color: MUTED, bold: false } }, { text: c.model || p.heading, options: { bold: true, color: INK } }],
+        { x, y: top, w: CW, h: 0.32, fontSize: 13, fontFace: "Arial", fit: "shrink" });
+      const sub = (c.source === "manual" && c.provider !== "manual" ? "Added by hand" : p.label) + (c.ms && c.status === "done" ? `  ·  ${secs(c.ms)}` : "");
+      s.addText(sub, { x, y: top + 0.3, w: CW, h: 0.24, fontSize: 9, color: MUTED, fontFace: "Arial" });
+      const by = top + 0.62;
+      s.addShape(pptx.ShapeType.rect, { x, y: by, w: CW, h: imgH, fill: { color: TILE }, line: { color: LINE, width: 0.75 } });
+      if (c.image) {
+        const j = await toJpeg(c.image.data);
+        const f = fit(j.w, j.h, CW, imgH);
+        s.addImage({ data: j.data, x: x + (CW - f.w) / 2, y: by + (imgH - f.h) / 2, w: f.w, h: f.h });
+      } else {
+        s.addText(c.status === "error" ? "Failed: " + clip(c.error, 140) : "No image", { x, y: by, w: CW, h: imgH, align: "center", valign: "middle", fontSize: 11, color: c.status === "error" ? ERR : MUTED, fontFace: "Arial" });
+      }
+      if (c.notes.trim()) s.addText(clip(c.notes, 260), { x, y: by + imgH + 0.12, w: CW, h: 0.95, fontSize: 10.5, color: INK, fontFace: "Arial", valign: "top", fit: "shrink" });
+    }
+    // detail slide: brief, references, prompts
+    const hasDetail = r.brief || r.refs.length || r.cols.some(c => c.prompt && c.prompt !== r.brief);
+    if (!hasDetail) continue;
+    const d = pptx.addSlide(); d.background = { color: "FFFFFF" };
+    d.addText((r.title || "Comparison") + " · brief and references", { x: M, y: 0.28, w: W - 2 * M, h: 0.45, fontSize: 18, bold: true, color: INK, fontFace: "Arial", fit: "shrink" });
+    d.addText("BRIEF", { x: M, y: 0.92, w: 3, h: 0.24, fontSize: 9, color: MUTED, fontFace: "Arial", charSpacing: 2 });
+    d.addText(clip(r.brief, 1200) || "—", { x: M, y: 1.16, w: 7.4, h: 2.3, fontSize: 11.5, color: INK, fontFace: "Arial", valign: "top", fit: "shrink" });
+    if (r.instructions?.trim() && r.cols.some(c => c.provider === "openai-responses")) {
+      d.addText("Rewrite instructions: " + clip(r.instructions, 300), { x: M, y: 3.42, w: 7.4, h: 0.4, fontSize: 9.5, italic: true, color: MUTED, fontFace: "Arial", valign: "top", fit: "shrink" });
+    }
+    if (r.refs.length) {
+      d.addText("REFERENCES", { x: 8.3, y: 0.92, w: 3, h: 0.24, fontSize: 9, color: MUTED, fontFace: "Arial", charSpacing: 2 });
+      const box = 2.2;
+      for (let k = 0; k < r.refs.length; k++) {
+        const bx = 8.3 + (k % 2) * (box + 0.18), byy = 1.18 + Math.floor(k / 2) * (box + 0.18) * 0.62;
+        const bh = box * 0.6 + 0.0;
+        const j = await toJpeg(r.refs[k].data, 1000); const f = fit(j.w, j.h, box, bh);
+        d.addShape(pptx.ShapeType.rect, { x: bx, y: byy, w: box, h: bh, fill: { color: TILE }, line: { color: LINE, width: 0.75 } });
+        d.addImage({ data: j.data, x: bx + (box - f.w) / 2, y: byy + (bh - f.h) / 2, w: f.w, h: f.h });
+      }
+    }
+    const py = 4.05;
+    d.addShape(pptx.ShapeType.line, { x: M, y: py - 0.12, w: W - 2 * M, h: 0, line: { color: LINE, width: 0.75 } });
+    for (let i = 0; i < 3; i++) {
+      const c = r.cols[i]; const x = M + i * (CW + GAP);
+      d.addText(`${LETTERS[i]}  ${c.model || PROVIDERS[c.provider].heading}  ·  ${(c.promptLabel || "prompt").toUpperCase()}`, { x, y: py, w: CW, h: 0.26, fontSize: 9, color: MUTED, fontFace: "Arial", fit: "shrink" });
+      d.addText(clip(c.prompt || (c.provider === "manual" ? "Added by hand" : "—"), 900), { x, y: py + 0.3, w: CW, h: 2.9, fontSize: 9.5, color: INK, fontFace: "Arial", valign: "top", fit: "shrink" });
+    }
+  }
+  const blob = await pptx.write({ outputType: "blob" });
+  const name = runs.length === 1 ? `${slug(runs[0].title || runs[0].brief.slice(0, 40))}.pptx` : `model-comparisons-${runs.length}.pptx`;
+  await saveFile(name, blob);
+}
+
+/* ---------- history drawer ---------- */
+const selected = new Set();
+async function openDrawer() {
+  historyCache = (await dbAll()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  renderHistory();
+  $("#drawer").hidden = false; $("#scrim").hidden = false; $("#closeDrawer").focus();
+}
+function closeDrawer() { $("#drawer").hidden = true; $("#scrim").hidden = true; }
+function renderHistory() {
+  const L = $("#histList");
+  if (!historyCache.length) { L.innerHTML = `<div class="empty-list">Nothing saved yet. Every comparison with a brief or an image is kept here, on this computer.</div>`; }
+  else L.innerHTML = historyCache.map(r => `
+    <div class="hrow${run && r.id === run.id ? " current" : ""}">
+      <input type="checkbox" id="sel-${r.id}" data-sel="${r.id}" ${selected.has(r.id) ? "checked" : ""} aria-label="Include in deck">
+      <div style="min-width:0">
+        <div class="ht">${esc(r.title || clip(r.brief, 60) || "Untitled comparison")}</div>
+        <div class="hm">${esc(fmtDate(r.createdAt))} · ${r.cols.map(c => esc(c.model || PROVIDERS[c.provider].heading)).join(" / ")}</div>
+        <div class="thumbs">${r.cols.map(c => `<span style="${c.image ? `background-image:url('${c.image.data}')` : ""}"></span>`).join("")}</div>
+        <div class="hacts">
+          <button type="button" class="btn small" data-open="${r.id}">Open</button>
+          <button type="button" class="btn small" data-exp="${r.id}">Export</button>
+          <button type="button" class="btn ghost small danger" data-del="${r.id}">Delete</button>
+        </div>
+      </div>
+    </div>`).join("");
+  $("#selCount").textContent = selected.size ? `${selected.size} selected` : "Tick runs to put them in one deck.";
+  $("#exportSel").disabled = !selected.size;
+  $("#exportSel").textContent = selected.size ? `Export ${selected.size} to PowerPoint` : "Export selected";
+}
+
+/* ---------- example comparison (drawn, no network) ---------- */
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function sweaterPath(x, W, H) {
+  x.beginPath();
+  x.moveTo(.42 * W, .19 * H); x.lineTo(.27 * W, .24 * H); x.lineTo(.09 * W, .80 * H); x.lineTo(.18 * W, .83 * H);
+  x.lineTo(.31 * W, .45 * H); x.lineTo(.30 * W, .87 * H); x.lineTo(.70 * W, .87 * H); x.lineTo(.69 * W, .45 * H);
+  x.lineTo(.82 * W, .83 * H); x.lineTo(.91 * W, .80 * H); x.lineTo(.73 * W, .24 * H); x.lineTo(.58 * W, .19 * H);
+  x.quadraticCurveTo(.5 * W, .27 * H, .42 * W, .19 * H); x.closePath();
+}
+function drawLeaves(x, W, H, seed, scale, tall, color) {
+  const R = rng(seed); x.fillStyle = color;
+  for (let k = 0; k < 140; k++) {
+    x.save(); x.translate(R() * W, R() * H); x.rotate((R() - .5) * (tall ? .9 : 2.6));
+    x.globalAlpha = .55 + R() * .4; x.beginPath();
+    x.ellipse(0, 0, (5 + R() * 6) * scale, (tall ? 34 : 16) * scale * (.6 + R() * .6), 0, 0, Math.PI * 2); x.fill(); x.restore();
+  }
+}
+function drawSweater({ base, leaf, seed = 1, scale = 1, tall = false, ruffle = false, plain = false }) {
+  const W = 600, H = 750, c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d");
+  x.fillStyle = "#f4f4f2"; x.fillRect(0, 0, W, H);
+  x.strokeStyle = "#b9b9b5"; x.lineWidth = 3; x.beginPath(); x.arc(W / 2, .15 * H, 14, Math.PI, 0); x.moveTo(W / 2 + 14, .15 * H); x.lineTo(W / 2, .19 * H); x.stroke();
+  x.save(); sweaterPath(x, W, H); x.fillStyle = base; x.fill(); x.clip();
+  if (!plain) drawLeaves(x, W, H, seed, scale, tall, leaf);
+  x.globalAlpha = .18; x.fillStyle = "#000"; x.fillRect(.30 * W, .83 * H, .40 * W, .04 * H); x.restore();
+  if (ruffle) { x.fillStyle = base; const R = rng(seed + 9); for (let t = 0; t <= 1; t += .045) { const sx = (.27 + (.09 - .27) * t) * W, sy = (.24 + (.80 - .24) * t) * H; x.beginPath(); x.arc(sx - 6, sy, 9 + R() * 2, 0, Math.PI * 2); x.fill(); x.beginPath(); x.arc(W - sx + 6, sy, 9 + R() * 2, 0, Math.PI * 2); x.fill(); } }
+  x.strokeStyle = "rgba(0,0,0,.18)"; x.lineWidth = 1.5; sweaterPath(x, W, H); x.stroke();
+  return c.toDataURL("image/png");
+}
+function drawSwatch() {
+  const W = 600, H = 600, c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d");
+  x.fillStyle = "#b5c7e2"; x.fillRect(0, 0, W, H); drawLeaves(x, W, H, 4, 1.2, true, "#5f7b3c"); return c.toDataURL("image/png");
+}
+function exampleRun() {
+  const BRIEF = "Edit the first image: give the sweater the ruffled sleeve shape from the second image, and apply its blue-and-green leaf print to the whole sweater. Keep the hanger, neckline, cuffs and flat-lay studio lighting.";
+  const img = (o) => ({ data: drawSweater(o), w: 600, h: 750 });
+  return {
+    id: "example", example: true, createdAt: new Date().toISOString(), title: "Sweater · sleeve and print transfer", brief: BRIEF,
+    instructions: "Keep every constraint in the brief. Don't add creative details.", size: "auto", quality: "high",
+    refs: [{ example: true, name: "red-crewneck.png", type: "image/png", data: drawSweater({ base: "#b8322a", plain: true }), w: 600, h: 750 },
+           { example: true, name: "print-swatch.png", type: "image/png", data: drawSwatch(), w: 600, h: 600 }],
+    cols: [
+      { ...blankCol("openai-responses", "gpt-5", "gpt-image-1"), status: "done", ms: 51400, source: "api", image: img({ base: "#b2c5e0", leaf: "#5c7a38", seed: 2, scale: 1.4, ruffle: true }),
+        promptLabel: "Revised prompt", prompt: "Edit the reference product photo of the red crewneck. Keep the front-facing flat-lay composition, hanger, knit texture, neckline, cuffs and hem ribbing. Replace the sleeves with ruffled seams matching the second image, and recolor the whole sweater in its pale-blue ground with green brushstroke leaves at the same scale.",
+        notes: "Closest to the brief. Ruffles read well; print a little large on the body." },
+      { ...blankCol("openai-images", "gpt-image-1"), status: "done", ms: 40900, source: "api", image: img({ base: "#b0c3df", leaf: "#58773a", seed: 5, scale: 1, tall: true, ruffle: true }),
+        promptLabel: "Original brief", prompt: BRIEF, notes: "Print scale is right. Hem ribbing lost." },
+      { ...blankCol("gemini", "gemini-2.5-flash-image"), status: "done", ms: 38800, source: "api", image: img({ base: "#b6c8e2", leaf: "#64813f", seed: 11, scale: 1.1 }),
+        promptLabel: "Original brief", prompt: BRIEF, text: "Here's the sweater with the leaf print applied.", notes: "Missed the sleeve shape entirely." }
+    ]
+  };
+}
+
+/* ---------- events ---------- */
+function bind() {
+  // sidebar inputs write straight into the comparison on screen
+  $("#runTitle").addEventListener("input", e => { run.title = e.target.value; renderMeta(); scheduleSave(run); });
+  $("#brief").addEventListener("input", e => { run.brief = e.target.value; renderSaved(); scheduleSave(run); });
+  $("#instructions").addEventListener("input", e => { run.instructions = e.target.value; scheduleSave(run); });
+  $("#size").addEventListener("change", e => { run.size = e.target.value; renderCols(); renderMeta(); scheduleSave(run); });
+  $("#quality").addEventListener("change", e => { run.quality = e.target.value; scheduleSave(run); });
+  $("#modelRows").addEventListener("change", e => {
+    const t = e.target; if (!t.id.startsWith("prov")) return;
+    const i = +t.dataset.i, c = run.cols[i]; c.provider = t.value; c.model = PROVIDERS[t.value].def;
+    if (t.value === "openai-responses" && !c.imageModel) c.imageModel = "gpt-image-1";
+    renderModelRows(); renderHeads(); renderRunButton(); LS.set("ml.cols", run.cols.map(c => ({ provider: c.provider, model: c.model, imageModel: c.imageModel }))); scheduleSave(run);
+  });
+  $("#modelRows").addEventListener("input", e => {
+    const t = e.target, i = +t.dataset.i; if (Number.isNaN(i)) return;
+    if (t.id.startsWith("model")) run.cols[i].model = t.value.trim();
+    else if (t.id.startsWith("imgModel")) run.cols[i].imageModel = t.value.trim();
+    else return;
+    renderHeads(); LS.set("ml.cols", run.cols.map(c => ({ provider: c.provider, model: c.model, imageModel: c.imageModel }))); scheduleSave(run);
+  });
+  // references
+  $("#refDrop").addEventListener("click", () => $("#refInput").click());
+  $("#refInput").addEventListener("change", e => { addRefs(e.target.files); e.target.value = ""; });
+  $("#refs").addEventListener("click", e => {
+    const b = e.target.closest("[data-rmref]"); if (!b) return;
+    run.refs.splice(+b.dataset.rmref, 1); renderRefs(); renderRunButton(); renderMeta(); scheduleSave(run);
+  });
+  dropTarget($("#refDrop"), files => addRefs(files));
+  // keys
+  for (const [id, k] of [["keyOpenai", "openai"], ["keyGoogle", "google"]]) {
+    const el = $("#" + id); el.value = keys[k] || "";
+    el.addEventListener("input", () => { keys[k] = el.value.trim(); LS.set("ml.keys", keys); renderKeyState(); renderRunButton(); });
+  }
+  document.querySelectorAll("[data-reveal]").forEach(b => b.addEventListener("click", () => {
+    const el = $("#" + b.dataset.reveal); el.type = el.type === "password" ? "text" : "password"; b.textContent = el.type === "password" ? "Show" : "Hide";
+  }));
+  $("#loadModels").addEventListener("click", loadModelLists);
+  $("#savePage").addEventListener("click", () => {
+    if (!PAGE_SOURCE) { toast("This page couldn't be copied."); return; }
+    saveFile("model-lineup.html", new Blob([PAGE_SOURCE], { type: "text/html" }));
+  });
+  // run controls
+  $("#runBtn").addEventListener("click", generate);
+  $("#newBtn").addEventListener("click", () => { setRun(newRunFrom({ ...run, refs: run.refs, brief: run.example ? "" : run.brief, title: "" })); toast("New comparison. Your brief, models and references carried over."); });
+  $("#startOwn").addEventListener("click", () => { setRun(newRunFrom({ cols: run.cols, size: "auto", quality: "auto" })); $("#brief").focus(); });
+  // columns
+  $("#cols").addEventListener("click", async e => {
+    const b = e.target.closest("[data-act]"); if (!b) return;
+    const i = +b.dataset.i, c = run.cols[i];
+    if (b.dataset.act === "pick") { pickFor = i; $("#colInput").click(); }
+    else if (b.dataset.act === "retry") runCol(run, i);
+    else if (b.dataset.act === "zoom") { $("#lbImg").src = c.image.data; $("#lbCap").textContent = `${LETTERS[i]} · ${c.model || PROVIDERS[c.provider].heading} · ${c.image.w}×${c.image.h}`; $("#lightbox").hidden = false; }
+    else if (b.dataset.act === "download") {
+      const ext = (c.image.data.match(/^data:image\/(\w+)/) || [, "png"])[1].replace("jpeg", "jpg");
+      saveFile(`${slug(run.title || "output")}-${LETTERS[i].toLowerCase()}-${slug(c.model || "image")}.${ext}`, dataURLToBlob(c.image.data));
+    }
+    else if (b.dataset.act === "copy") {
+      try { await navigator.clipboard.writeText(c.prompt); toast("Prompt copied."); }
+      catch (err) { const p = b.closest(".prompt").querySelector(".pt"); const s = getSelection(); const rg = document.createRange(); rg.selectNodeContents(p); s.removeAllRanges(); s.addRange(rg); toast("Selected. Press Ctrl+C or ⌘C to copy."); }
+    }
+  });
+  $("#cols").addEventListener("input", e => {
+    const t = e.target; if (!t.classList.contains("notes")) return;
+    run.cols[+t.dataset.i].notes = t.value; scheduleSave(run);
+  });
+  let pickFor = 0;
+  $("#colInput").addEventListener("change", e => { const f = e.target.files[0]; if (f) setColImage(pickFor, f); e.target.value = ""; });
+  $("#cols").addEventListener("dragover", e => { const f = e.target.closest("[data-frame]"); if (!f) return; e.preventDefault(); f.classList.add("over"); });
+  $("#cols").addEventListener("dragleave", e => { const f = e.target.closest("[data-frame]"); if (f) f.classList.remove("over"); });
+  $("#cols").addEventListener("drop", e => {
+    const f = e.target.closest("[data-frame]"); if (!f) return; e.preventDefault(); f.classList.remove("over");
+    const file = [...(e.dataTransfer?.files || [])][0]; if (file) setColImage(+f.dataset.frame, file);
+  });
+  // paste: into a focused column frame, otherwise into references
+  document.addEventListener("paste", e => {
+    const files = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith("image/"));
+    if (!files.length) return;
+    const fr = document.activeElement?.closest?.("[data-frame]");
+    e.preventDefault();
+    if (fr) setColImage(+fr.dataset.frame, files[0]); else addRefs(files);
+  });
+  // export + history
+  $("#exportBtn").addEventListener("click", async () => {
+    if (!run.cols.some(c => c.image)) { toast("Nothing to export yet. Generate or add at least one image."); return; }
+    toast("Building the deck…", 8000); await buildDeck([run]);
+  });
+  $("#historyBtn").addEventListener("click", openDrawer);
+  $("#closeDrawer").addEventListener("click", closeDrawer);
+  $("#scrim").addEventListener("click", closeDrawer);
+  $("#histList").addEventListener("change", e => { const id = e.target.dataset.sel; if (!id) return; e.target.checked ? selected.add(id) : selected.delete(id); renderHistory(); });
+  $("#histList").addEventListener("click", async e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.open) { const r = historyCache.find(x => x.id === b.dataset.open); if (r) { r.saved = true; setRun(r); closeDrawer(); } }
+    else if (b.dataset.exp) { const r = historyCache.find(x => x.id === b.dataset.exp); if (r) { toast("Building the deck…", 8000); await buildDeck([r]); } }
+    else if (b.dataset.del) {
+      if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Delete for good?"; setTimeout(() => { if (b.isConnected) { b.dataset.confirm = ""; b.textContent = "Delete"; } }, 3000); return; }
+      const id = b.dataset.del; await dbDel(id); selected.delete(id); historyCache = historyCache.filter(x => x.id !== id);
+      if (run.id === id) { run.saved = false; run.example = false; setRun(newRunFrom(run)); }
+      renderHistory(); toast("Deleted.");
+    }
+  });
+  $("#exportSel").addEventListener("click", async () => {
+    const rs = historyCache.filter(r => selected.has(r.id)).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    if (!rs.length) return; toast("Building the deck…", 8000); await buildDeck(rs);
+  });
+  $("#lightbox").addEventListener("click", () => ($("#lightbox").hidden = true));
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") { $("#lightbox").hidden = true; if (!$("#drawer").hidden) closeDrawer(); }
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") generate();
+  });
+  // ticking timers for running columns
+  setInterval(() => {
+    document.querySelectorAll("[data-elapsed]").forEach(el => {
+      const c = run.cols[+el.dataset.elapsed]; if (c?.started) el.textContent = "Running · " + secs(performance.now() - c.started);
+    });
+  }, 100);
+}
+function dropTarget(el, onFiles) {
+  el.addEventListener("dragover", e => { e.preventDefault(); el.classList.add("over"); });
+  el.addEventListener("dragleave", () => el.classList.remove("over"));
+  el.addEventListener("drop", e => { e.preventDefault(); el.classList.remove("over"); onFiles(e.dataTransfer?.files || []); });
+}
+async function loadModelLists() {
+  if (!keys.openai && !keys.google) { toast("Add at least one key first."); return; }
+  const b = $("#loadModels"); b.disabled = true; b.textContent = "Loading…";
+  const msgs = [];
+  if (keys.openai) {
+    try {
+      const j = await readJSON(await fetch("https://api.openai.com/v1/models", { headers: { Authorization: "Bearer " + keys.openai } }));
+      const ids = (j.data || []).map(m => m.id).sort();
+      lists.openaiImage = ids.filter(id => /image|dall-e/.test(id));
+      lists.openaiChat = ids.filter(id => /^(gpt-|o\d|chatgpt)/.test(id) && !/image|audio|realtime|tts|transcribe|embedding|search|instruct/.test(id));
+      msgs.push(`OpenAI: ${lists.openaiImage.length} image, ${lists.openaiChat.length} chat`);
+    } catch (e) { msgs.push("OpenAI: " + (e instanceof UserError ? e.message : "couldn't connect")); }
+  }
+  if (keys.google) {
+    try {
+      const j = await readJSON(await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000", { headers: { "x-goog-api-key": keys.google } }));
+      lists.gemini = (j.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent") && /image/.test(m.name)).map(m => m.name.replace(/^models\//, "")).sort();
+      msgs.push(`Google: ${lists.gemini.length} image models`);
+    } catch (e) { msgs.push("Google: " + (e instanceof UserError ? e.message : "couldn't connect")); }
+  }
+  LS.set("ml.lists", lists); fillDatalists();
+  b.disabled = false; b.textContent = "Load my model lists"; toast(msgs.join(" · "), 5000);
+}
+
+/* ---------- start ---------- */
+async function start() {
+  if (!hosted && !isLocalHost) {
+    // the viewer may attach its helper a moment after load
+    await new Promise(r => setTimeout(r, 60));
+    hosted = typeof window.claude?.use === "function";
+  }
+  $("#modeTag").textContent = hosted ? "Shared view" : "Local workspace";
+  $("#keysLocal").hidden = hosted; $("#keysHosted").hidden = !hosted;
+  fillDatalists(); renderKeyState(); bind();
+  const all = await dbAll();
+  const last = LS.get("ml.lastRun", null);
+  const pick = all.find(r => r.id === last) || all.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  if (pick) { pick.saved = true; pick.cols.forEach(c => { if (c.status === "running") { c.status = "error"; c.error = "Interrupted when the page closed."; } }); setRun(pick); }
+  else {
+    const ex = exampleRun();
+    setRun(ex);
+  }
+}
+start();
+})();
+</script>
+
+</html>
